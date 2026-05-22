@@ -13,10 +13,7 @@ config_version=5
 config/name="fegame"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
-
-[physics]
-
-3d/physics_engine="Jolt Physics"
+run/main_scene="res://scenes/boot/boot_scene.tscn"
 
 [autoload]
 
@@ -26,6 +23,10 @@ SceneRouter="*res://scripts/autoload/scene_router.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 InputManager="*res://scripts/autoload/input_manager.gd"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
 
 [rendering]
 
