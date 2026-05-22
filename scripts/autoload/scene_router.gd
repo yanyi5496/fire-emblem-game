@@ -17,6 +17,8 @@ func goto(scene_key: String, params: Dictionary = {}) -> void:
 		return
 	after_scene_change.emit(scene_key)
 
+
+
 func _get_scene_path(key: String) -> String:
 	match key:
 		"main_menu":
@@ -27,6 +29,8 @@ func _get_scene_path(key: String) -> String:
 			return "res://scenes/menu/save_load_menu.tscn"
 		"battle":
 			return "res://scenes/battle/battle_scene.tscn"
+		"result":
+			return "res://scenes/menu/main_menu.tscn"
 		"story":
 			return "res://scenes/story/story_player.tscn"
 		"boot":

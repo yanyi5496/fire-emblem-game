@@ -5,52 +5,176 @@ class_name CombatManager
 signal combat_started(attacker_id: String, defender_id: String)
 signal combat_finished(result: Dictionary)
 
+const WEAPON_TRIANGLE := {
+	"sword": "axe",
+	"lance": "sword",
+	"axe": "lance",
+}
+
 func simulate(attacker: Node, defender: Node, weapon_id: String) -> Dictionary:
-	var result := _create_result(attacker, defender, weapon_id)
-	_calc_hit_rate(result)
-	_calc_crit_rate(result)
-	_calc_damage(result)
-	_calc_counter(result)
-	_calc_follow_up(result)
+	var weapon_data: Dictionary = DataManager.get_weapon(weapon_id)
+	var result: Dictionary = _create_result(attacker, defender, weapon_id, weapon_data)
+	_calc_weapon_triangle(result, weapon_data)
+	_calc_hit_rate(result, weapon_data)
+	_calc_crit_rate(result, weapon_data)
+	_calc_damage(result, weapon_data)
+	_calc_counter(result, weapon_data)
+	_calc_follow_up(result, weapon_data)
 	return result
 
 func execute(attacker: Node, defender: Node, weapon_id: String) -> void:
-	var result := simulate(attacker, defender, weapon_id)
+	var result: Dictionary = simulate(attacker, defender, weapon_id)
 	combat_started.emit(attacker.unit_id, defender.unit_id)
 	_apply_result(result)
 	combat_finished.emit(result)
 
-func _create_result(attacker: Node, defender: Node, weapon_id: String) -> Dictionary:
+func _create_result(attacker: Node, defender: Node, weapon_id: String, weapon_data: Dictionary) -> Dictionary:
 	return {
 		"attacker_id": attacker.unit_id,
 		"defender_id": defender.unit_id,
 		"weapon_id": weapon_id,
+		"attacker_ref": attacker,
+		"defender_ref": defender,
 		"hit_rate": 0,
 		"crit_rate": 0,
 		"damage": 0,
+		"is_magic": weapon_data.get("is_magic", false),
 		"did_hit": false,
 		"did_crit": false,
 		"did_counter": false,
 		"did_follow_up": false,
 		"counter_hit_rate": 0,
 		"counter_damage": 0,
+		"triangle_advantage": false,
+		"triangle_hit_bonus": 0,
+		"triangle_dmg_bonus": 0,
 		"applied_effects": []
 	}
 
-func _calc_hit_rate(result: Dictionary) -> void:
-	result["hit_rate"] = 50
+func _calc_weapon_triangle(result: Dictionary, weapon_data: Dictionary) -> void:
+	var atk_type: String = weapon_data.get("type", "")
+	if atk_type == "" or not result.has("defender_ref"):
+		return
+	var defender: Node = result["defender_ref"] as Node
+	if not defender:
+		return
+	var def_weapon_id: String = defender.runtime_state.equipped_weapon
+	if def_weapon_id == "":
+		return
+	var def_weapon: Dictionary = DataManager.get_weapon(def_weapon_id)
+	var def_type: String = def_weapon.get("type", "")
+	if def_type == "":
+		return
+	if WEAPON_TRIANGLE.get(atk_type, "") == def_type:
+		result["triangle_advantage"] = true
+		result["triangle_hit_bonus"] = 15
+		result["triangle_dmg_bonus"] = 1
+	elif WEAPON_TRIANGLE.get(def_type, "") == atk_type:
+		result["triangle_hit_bonus"] = -15
+		result["triangle_dmg_bonus"] = -1
 
-func _calc_crit_rate(result: Dictionary) -> void:
-	result["crit_rate"] = 0
+func _calc_hit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
+	var attacker: Node = result["attacker_ref"] as Node
+	var defender: Node = result["defender_ref"] as Node
+	if not attacker or not defender:
+		result["hit_rate"] = 50
+		return
+	var base_hit: int = weapon_data.get("hit", 0)
+	var skl: int = attacker.runtime_state.skl_stat
+	var luk: int = attacker.runtime_state.luk_stat
+	var tri_hit: int = result.get("triangle_hit_bonus", 0)
+	var target_spd: int = defender.runtime_state.spd_stat
+	var target_luk: int = defender.runtime_state.luk_stat
+	var raw: int = base_hit + skl * 2 + luk + tri_hit - (target_spd / 2 + target_luk)
+	result["hit_rate"] = clampi(raw, 0, 100)
 
-func _calc_damage(result: Dictionary) -> void:
-	result["damage"] = 0
+func _calc_crit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
+	var attacker: Node = result["attacker_ref"] as Node
+	if not attacker:
+		result["crit_rate"] = 0
+		return
+	var base_crit: int = weapon_data.get("crit", 0)
+	var skl: int = attacker.runtime_state.skl_stat
+	result["crit_rate"] = max(0, skl / 2 + base_crit)
 
-func _calc_counter(result: Dictionary) -> void:
-	result["did_counter"] = false
+func _calc_damage(result: Dictionary, weapon_data: Dictionary) -> void:
+	var attacker: Node = result["attacker_ref"] as Node
+	var defender: Node = result["defender_ref"] as Node
+	if not attacker or not defender:
+		result["damage"] = 0
+		return
+	var might: int = weapon_data.get("might", 0)
+	var tri_dmg: int = result.get("triangle_dmg_bonus", 0)
+	var is_magic: bool = result.get("is_magic", false)
+	var atk_stat: int = attacker.runtime_state.mag_stat if is_magic else attacker.runtime_state.str_stat
+	var def_stat: int = defender.runtime_state.res_stat if is_magic else defender.runtime_state.def_stat
+	result["damage"] = max(0, atk_stat + might + tri_dmg - def_stat)
 
-func _calc_follow_up(result: Dictionary) -> void:
-	result["did_follow_up"] = false
+func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
+	var attacker: Node = result["attacker_ref"] as Node
+	var defender: Node = result["defender_ref"] as Node
+	if not attacker or not defender:
+		result["did_counter"] = false
+		return
+	var def_weapon_id: String = defender.runtime_state.equipped_weapon
+	if def_weapon_id == "":
+		result["did_counter"] = false
+		return
+	result["did_counter"] = true
+	var def_weapon: Dictionary = DataManager.get_weapon(def_weapon_id)
+	var def_might: int = def_weapon.get("might", 0)
+	var tri_dmg: int = -result.get("triangle_dmg_bonus", 0)
+	var is_magic: bool = def_weapon.get("is_magic", false)
+	var atk_stat: int = defender.runtime_state.mag_stat if is_magic else defender.runtime_state.str_stat
+	var def_stat: int = attacker.runtime_state.res_stat if is_magic else attacker.runtime_state.def_stat
+	result["counter_damage"] = max(0, atk_stat + def_might + tri_dmg - def_stat)
+	var def_hit: int = def_weapon.get("hit", 0)
+	var d_skl: int = defender.runtime_state.skl_stat
+	var d_luk: int = defender.runtime_state.luk_stat
+	var a_spd: int = attacker.runtime_state.spd_stat
+	var a_luk: int = attacker.runtime_state.luk_stat
+	var raw: int = def_hit + d_skl * 2 + d_luk - (a_spd / 2 + a_luk)
+	result["counter_hit_rate"] = clampi(raw, 0, 100)
+
+func _calc_follow_up(result: Dictionary, weapon_data: Dictionary) -> void:
+	var attacker: Node = result["attacker_ref"] as Node
+	var defender: Node = result["defender_ref"] as Node
+	if not attacker or not defender:
+		result["did_follow_up"] = false
+		return
+	var atk_weight: int = weapon_data.get("weight", 0)
+	var atk_spd: int = attacker.runtime_state.spd_stat - atk_weight
+	var def_weapon_id: String = defender.runtime_state.equipped_weapon
+	var def_weight: int = 0
+	if def_weapon_id != "":
+		var def_weapon: Dictionary = DataManager.get_weapon(def_weapon_id)
+		def_weight = def_weapon.get("weight", 0)
+	var def_spd: int = defender.runtime_state.spd_stat - def_weight
+	result["did_follow_up"] = max(0, atk_spd) >= max(0, def_spd) + 4
 
 func _apply_result(result: Dictionary) -> void:
-	pass
+	var attacker: Node = result.get("attacker_ref") as Node
+	var defender: Node = result.get("defender_ref") as Node
+	if not attacker or not defender:
+		return
+	var hit_roll: int = randi() % 100
+	if hit_roll < result.get("hit_rate", 0):
+		result["did_hit"] = true
+		var crit_roll: int = randi() % 100
+		if crit_roll < result.get("crit_rate", 0):
+			result["did_crit"] = true
+			defender.take_damage(result.get("damage", 0) * 3)
+		else:
+			defender.take_damage(result.get("damage", 0))
+	if not defender.is_alive():
+		return
+	if result.get("did_counter", false):
+		var counter_roll: int = randi() % 100
+		if counter_roll < result.get("counter_hit_rate", 0):
+			attacker.take_damage(result.get("counter_damage", 0))
+	if not attacker.is_alive():
+		return
+	if result.get("did_follow_up", false):
+		var follow_roll: int = randi() % 100
+		if follow_roll < result.get("hit_rate", 0):
+			defender.take_damage(result.get("damage", 0))

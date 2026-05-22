@@ -35,6 +35,7 @@ func set_turn(new_turn: int) -> void:
 func set_phase(new_phase: GamePhase) -> void:
 	if new_phase == current_phase:
 		return
+	assert_valid_transition(current_phase, new_phase)
 	previous_phase = current_phase
 	var old := current_phase
 	current_phase = new_phase
@@ -73,6 +74,26 @@ func from_dict(data: Dictionary) -> void:
 	inventory = data.get("inventory", []).duplicate()
 	story_flags = data.get("story_flags", {}).duplicate()
 	completed_maps = data.get("completed_maps", []).duplicate()
+
+func is_valid_transition(from: GamePhase, to: GamePhase) -> bool:
+	var allowed: Dictionary = {
+		GamePhase.NONE: [GamePhase.TITLE],
+		GamePhase.TITLE: [GamePhase.STORY, GamePhase.SETTINGS, GamePhase.SAVE_LOAD],
+		GamePhase.STORY: [GamePhase.BATTLE_PREP, GamePhase.NONE],
+		GamePhase.BATTLE_PREP: [GamePhase.BATTLE_PLAYER],
+		GamePhase.BATTLE_PLAYER: [GamePhase.BATTLE_ENEMY],
+		GamePhase.BATTLE_ENEMY: [GamePhase.BATTLE_NPC, GamePhase.BATTLE_PLAYER],
+		GamePhase.BATTLE_NPC: [GamePhase.BATTLE_PLAYER],
+		GamePhase.BATTLE_RESULT: [GamePhase.TITLE, GamePhase.NONE],
+		GamePhase.SETTINGS: [GamePhase.TITLE],
+		GamePhase.SAVE_LOAD: [GamePhase.TITLE, GamePhase.BATTLE_PREP],
+	}
+	var valid: Array = allowed.get(from, [])
+	return to in valid
+
+func assert_valid_transition(from: GamePhase, to: GamePhase) -> void:
+	if not is_valid_transition(from, to):
+		push_warning("Invalid phase transition: %s -> %s" % [from, to])
 
 func reset() -> void:
 	current_chapter = ""

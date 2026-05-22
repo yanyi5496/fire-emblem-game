@@ -1,13 +1,34 @@
 extends Node
 
-var _units := {}
-var _weapons := {}
-var _jobs := {}
-var _skills := {}
-var _maps := {}
+var _units: Dictionary = {}
+var _weapons: Dictionary = {}
+var _jobs: Dictionary = {}
+var _skills: Dictionary = {}
+var _maps: Dictionary = {}
+
+var _schema_validators: Dictionary = {}
 
 func _ready() -> void:
+	_register_schemas()
 	load_all()
+
+func _register_schemas() -> void:
+	_schema_validators["units"] = {
+		"required_fields": ["id", "name", "job", "stats", "inventory"],
+		"stats_fields": ["hp", "str", "mag", "skl", "spd", "def", "res", "luk", "mov"],
+	}
+	_schema_validators["weapons"] = {
+		"required_fields": ["id", "type", "might", "hit", "weight", "min_range", "max_range", "durability"],
+	}
+	_schema_validators["jobs"] = {
+		"required_fields": ["id", "name", "weapons", "mov"],
+	}
+	_schema_validators["skills"] = {
+		"required_fields": ["id", "type", "trigger", "effect"],
+	}
+	_schema_validators["maps"] = {
+		"required_fields": ["id", "name", "tiles", "terrain_defs", "units"],
+	}
 
 func load_all() -> void:
 	_load_directory("units", _units)
@@ -30,17 +51,42 @@ func _load_directory(dir_name: String, target: Dictionary) -> void:
 			var file := FileAccess.open(file_path, FileAccess.READ)
 			if file:
 				var json_str := file.get_as_text()
-				var json := JSON.new()
-				var parse_result := json.parse(json_str)
+				var json_parser := JSON.new()
+				var parse_result := json_parser.parse(json_str)
 				if parse_result == OK:
-					var data := json.get_data() as Dictionary
+					var data := json_parser.get_data() as Dictionary
 					if data.has("id"):
 						target[data["id"]] = data
 					else:
 						push_error("Missing 'id' in %s" % file_path)
 				else:
-					push_error("JSON parse error in %s: %s" % [file_path, json.get_error_message()])
+					push_error("JSON parse error in %s: %s" % [file_path, json_parser.get_error_message()])
 		file_name = dir.get_next()
+
+func validate_all() -> Dictionary:
+	var errors: Array[String] = []
+	for dir_name in _schema_validators:
+		var validator: Dictionary = _schema_validators[dir_name]
+		var data_map: Dictionary = _get_data_map(dir_name)
+		for item_id in data_map:
+			var item: Dictionary = data_map[item_id] as Dictionary
+			for field in validator.get("required_fields", []):
+				if not item.has(field):
+					errors.append("%s/%s missing field: %s" % [dir_name, item_id, field])
+			if item.has("stats") and validator.has("stats_fields"):
+				for sfield in validator["stats_fields"]:
+					if not item["stats"].has(sfield):
+						errors.append("%s/%s.stats missing field: %s" % [dir_name, item_id, sfield])
+	return { "valid": errors.is_empty(), "errors": errors }
+
+func _get_data_map(dir_name: String) -> Dictionary:
+	match dir_name:
+		"units": return _units
+		"weapons": return _weapons
+		"jobs": return _jobs
+		"skills": return _skills
+		"maps": return _maps
+	return {}
 
 func reload() -> void:
 	_units.clear()

@@ -16,6 +16,7 @@ func run_all() -> void:
 	_run_test(TestResourcesLoad, "test_resources_load")
 	_run_test(TestCombatFormula, "test_combat_formula")
 	_run_test(TestScenesLoad, "test_scenes_load")
+	_run_test(TestSceneContracts, "test_scene_contracts")
 	_print_summary()
 
 func _run_test(test_class: GDScript, name: String) -> void:

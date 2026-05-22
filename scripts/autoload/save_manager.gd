@@ -1,6 +1,7 @@
 extends Node
 
 const SAVE_VERSION := "2.0.0"
+const MIN_SUPPORTED_VERSION := "2.0.0"
 const MAX_SLOTS := 10
 const MAX_AUTO_SAVES := 5
 const REQUIRED_SAVE_FIELDS := [
@@ -19,6 +20,12 @@ const REQUIRED_SAVE_FIELDS := [
 signal save_completed(slot: int)
 signal load_completed(slot: int)
 signal save_failed(slot: int, reason: String)
+
+func has_any_save() -> bool:
+	for i in range(1, MAX_SLOTS + 1):
+		if FileAccess.file_exists(_get_save_path(i)):
+			return true
+	return false
 
 func save_game(slot: int) -> bool:
 	var data := _build_save_data()
@@ -45,6 +52,7 @@ func load_game(slot: int) -> Dictionary:
 		return {}
 	var data := json.get_data() as Dictionary
 	if _validate_version(data):
+		_migrate(data)
 		GameState.from_dict(data)
 		load_completed.emit(slot)
 		return data
@@ -61,9 +69,20 @@ func _get_save_path(slot: int) -> String:
 	return "user://save_%02d.save" % slot
 
 func _validate_version(data: Dictionary) -> bool:
-	if data.get("version", "") != SAVE_VERSION:
+	var ver: String = data.get("version", "0.0.0")
+	if ver < MIN_SUPPORTED_VERSION:
 		return false
 	for field_name in REQUIRED_SAVE_FIELDS:
 		if not data.has(field_name):
 			return false
 	return true
+
+func _migrate(data: Dictionary) -> void:
+	var ver: String = data.get("version", "0.0.0")
+	if ver < "2.0.0" and data.has("turn_number") and not data.has("turn"):
+		data["turn"] = data["turn_number"]
+	if ver < "2.0.0" and not data.has("chapter"):
+		data["chapter"] = data.get("map_id", "")
+	if ver < "2.0.0" and not data.has("completed_maps"):
+		data["completed_maps"] = []
+	data["version"] = SAVE_VERSION

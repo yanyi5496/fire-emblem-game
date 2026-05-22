@@ -8,7 +8,7 @@ const DEFAULT_STORY_SCENE := "story"
 
 func _ready() -> void:
 	GameState.set_phase(GameState.GamePhase.TITLE)
-	continue_button.disabled = not FileAccess.file_exists("user://save_01.save")
+	continue_button.disabled = not SaveManager.has_any_save()
 
 func _on_new_game_pressed() -> void:
 	GameState.reset()

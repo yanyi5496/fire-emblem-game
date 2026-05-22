@@ -33,7 +33,10 @@ func hide_action_menu() -> void:
 	action_menu.hide()
 
 func show_attack_preview(result: Dictionary) -> void:
-	attack_preview.show()
+	if attack_preview and attack_preview.has_method("show_result"):
+		attack_preview.show_result(result)
+	else:
+		attack_preview.show()
 
 func hide_attack_preview() -> void:
 	attack_preview.hide()

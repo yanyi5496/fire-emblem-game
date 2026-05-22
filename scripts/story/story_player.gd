@@ -17,9 +17,14 @@ signal choice_made(choice_index: int)
 var _lines: Array[Dictionary] = []
 var _current_index: int = 0
 var _current_character: String = ""
+var _is_narrator_mode := true
 
 func _ready() -> void:
 	hide()
+	dialogue_box.hide()
+	choice_container.hide()
+	if not InputManager.confirm_pressed.is_connected(_on_confirm_pressed):
+		InputManager.confirm_pressed.connect(_on_confirm_pressed)
 	if _lines.is_empty():
 		call_deferred("play_story", DEFAULT_STORY_PATH)
 
@@ -27,6 +32,8 @@ func play_story(file_path: String) -> void:
 	GameState.set_phase(GameState.GamePhase.STORY)
 	_lines = StoryParser.parse_story(file_path)
 	_current_index = 0
+	_current_character = ""
+	_is_narrator_mode = true
 	show()
 	_advance()
 
@@ -39,9 +46,11 @@ func _advance() -> void:
 	match line.get("type", StoryParser.LineType.UNKNOWN):
 		StoryParser.LineType.NARRATOR:
 			_show_narrator()
+			_advance()
 		StoryParser.LineType.CHARACTER:
 			_current_character = line.get("name", "")
 			_show_character(_current_character, "")
+			_advance()
 		StoryParser.LineType.DIALOGUE:
 			_show_dialogue(line.get("content", ""))
 		StoryParser.LineType.BGM:
@@ -55,20 +64,27 @@ func _advance() -> void:
 			_advance()
 
 func _show_narrator() -> void:
+	_is_narrator_mode = true
 	portrait_texture.texture = null
 	character_name_label.text = ""
-	dialogue_text.text = ""
-	dialogue_box.show()
 
 func _show_character(name: String, expression: String) -> void:
+	_is_narrator_mode = false
 	character_name_label.text = name
 	var portrait_id := _name_to_portrait_id(name)
 	var portrait_path := "res://assets/portraits/portrait_%s.png" % portrait_id
 	var tex := load(portrait_path) as Texture2D
 	if tex:
 		portrait_texture.texture = tex
+	else:
+		portrait_texture.texture = null
 
 func _show_dialogue(text: String) -> void:
+	if _is_narrator_mode:
+		character_name_label.text = ""
+		portrait_texture.texture = null
+	elif _current_character != "":
+		character_name_label.text = _current_character
 	dialogue_text.text = text
 	dialogue_box.show()
 
@@ -96,6 +112,13 @@ func _on_choice_selected(index: int) -> void:
 	choice_made.emit(index)
 	_advance()
 
+func _on_confirm_pressed() -> void:
+	if GameState.current_phase != GameState.GamePhase.STORY:
+		return
+	if choice_container.visible:
+		return
+	_advance()
+
 func _handle_event(event_id: String) -> void:
 	match event_id:
 		"load_map":
@@ -120,6 +143,7 @@ func _finish() -> void:
 	_lines.clear()
 	for child in choice_container.get_children():
 		child.queue_free()
+	dialogue_box.hide()
 	hide()
 	choice_container.hide()
 	GameState.set_phase(GameState.GamePhase.NONE)

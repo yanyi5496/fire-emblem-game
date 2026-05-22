@@ -10,10 +10,12 @@ enum Phase { PLAYER, ENEMY, NPC, ROUND_END }
 
 var current_phase: Phase = Phase.PLAYER
 var turn_number: int = 1
+var ai_controller: AIController
 
 func initialize_battle(starting_turn: int = 1) -> void:
 	turn_number = max(1, starting_turn)
 	GameState.set_turn(turn_number)
+	ai_controller = AIController.new()
 
 func start_turn(phase_name: String) -> void:
 	match phase_name:
@@ -28,6 +30,20 @@ func start_turn(phase_name: String) -> void:
 			current_phase = Phase.NPC
 			GameState.set_phase(GameState.GamePhase.BATTLE_NPC)
 	turn_started.emit(phase_name)
+	if phase_name == "enemy":
+		_execute_enemy_turn()
+
+func _execute_enemy_turn() -> void:
+	var bc := _get_battle_controller()
+	if not bc:
+		return
+	var enemy_units: Array[Node] = []
+	for unit in get_tree().get_nodes_in_group("units"):
+		if unit.team == "enemy" and unit.is_alive():
+			enemy_units.append(unit)
+	ai_controller.execute_turn(enemy_units)
+	bc._check_battle_end()
+	start_turn("player")
 
 func end_turn() -> void:
 	var phase_name := _phase_to_string(current_phase)
@@ -53,6 +69,12 @@ func _execute_round_end() -> void:
 	round_ended.emit()
 	start_turn("player")
 
+func _get_battle_controller() -> Node:
+	var tree := get_tree()
+	if not tree:
+		return null
+	return tree.current_scene
+
 func _reset_unit_states() -> void:
 	var units := get_tree().get_nodes_in_group("units")
 	for unit in units:
@@ -60,7 +82,9 @@ func _reset_unit_states() -> void:
 			unit.reset_action_state()
 
 func _process_buff_ticks() -> void:
-	pass
+	var service := StatusEffectService.new()
+	var units := get_tree().get_nodes_in_group("units")
+	service.tick_all(units)
 
 func _process_debuff_ticks() -> void:
 	pass
