@@ -1,0 +1,7 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local review and agent runtime files
+docs/review/
+RUNNING.md
