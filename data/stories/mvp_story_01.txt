@@ -1,0 +1,24 @@
+[Narrator]
+边境小镇传来急报——一伙山贼占据了北方的山道，
+抢劫过往商旅。
+
+[BGM: serious_prepare]
+
+[Character: 艾克]
+又是山贼……这几个月他们已经第三次拦路了。
+
+[Character: 琳娜]
+这次不能再让他们跑了。艾克，我们去吧。
+
+[Character: 艾克]
+嗯。你负责治疗，别冲太前。
+
+[Character: 琳娜]
+知道啦知道啦。你才是，别又一个人往前冲。
+
+[Narrator]
+两人向北方的山道出发。
+
+[BGM: battle_preparation]
+
+[Event: load_map]

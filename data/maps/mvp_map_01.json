@@ -1,0 +1,44 @@
+{
+  "id": "mvp_map_01",
+  "name": "山道遭遇战",
+  "width": 10,
+  "height": 10,
+  "tiles": [
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,2,2,1,1,2,2,1,1],
+    [1,1,2,2,1,1,2,2,1,1],
+    [1,1,1,1,3,3,1,1,1,1],
+    [1,1,1,1,3,3,1,1,1,1],
+    [1,1,2,2,1,1,2,2,1,1],
+    [1,1,2,2,1,1,2,2,1,1],
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1]
+  ],
+  "terrain_ids": [
+    ["plain","plain","plain","plain","plain","plain","plain","plain","plain","plain"],
+    ["plain","plain","plain","plain","plain","plain","plain","plain","plain","plain"],
+    ["plain","plain","forest","forest","plain","plain","forest","forest","plain","plain"],
+    ["plain","plain","forest","forest","plain","plain","forest","forest","plain","plain"],
+    ["plain","plain","plain","plain","mountain","mountain","plain","plain","plain","plain"],
+    ["plain","plain","plain","plain","mountain","mountain","plain","plain","plain","plain"],
+    ["plain","plain","forest","forest","plain","plain","forest","forest","plain","plain"],
+    ["plain","plain","forest","forest","plain","plain","forest","forest","plain","plain"],
+    ["plain","plain","plain","plain","plain","plain","plain","plain","plain","plain"],
+    ["plain","plain","plain","plain","plain","plain","plain","plain","plain","plain"]
+  ],
+  "terrain_defs": {
+    "plain": {"move_cost": 1, "avoid_bonus": 0, "defense_bonus": 0, "walkable": true, "height": 0},
+    "forest": {"move_cost": 2, "avoid_bonus": 20, "defense_bonus": 1, "walkable": true, "height": 1},
+    "mountain": {"move_cost": 3, "avoid_bonus": 10, "defense_bonus": 2, "walkable": true, "height": 2}
+  },
+  "units": [
+    {"unit_id": "hero_001", "x": 1, "y": 1, "team": "player"},
+    {"unit_id": "hero_002", "x": 2, "y": 1, "team": "player"},
+    {"unit_id": "enemy_001", "x": 8, "y": 8, "team": "enemy"},
+    {"unit_id": "enemy_002", "x": 7, "y": 9, "team": "enemy"}
+  ],
+  "victory_condition": "rout",
+  "defeat_condition": "all_dead",
+  "max_turns": 20
+}

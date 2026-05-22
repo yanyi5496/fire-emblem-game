@@ -1,0 +1,15 @@
+{
+  "id": "priest",
+  "name": "牧师",
+  "tier": 1,
+  "promotes_to": "sage",
+  "weapons": ["staff"],
+  "mov": 5,
+  "growth_bonus": {
+    "mp": 10,
+    "mag": 5,
+    "res": 10
+  },
+  "terrain_adaptation": {},
+  "skills": []
+}

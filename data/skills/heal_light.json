@@ -1,0 +1,16 @@
+{
+  "id": "heal_light",
+  "name": "治愈之光",
+  "type": "active",
+  "trigger": "before_combat",
+  "cost": {
+    "mp": 4
+  },
+  "effect": {
+    "type": "heal",
+    "value": 10
+  },
+  "cooldown": 1,
+  "description": "恢复一名友军 10 点 HP",
+  "priority": 50
+}

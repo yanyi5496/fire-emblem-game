@@ -1,0 +1,14 @@
+{
+  "id": "iron_axe",
+  "name": "铁斧",
+  "type": "axe",
+  "might": 8,
+  "hit": 75,
+  "crit": 0,
+  "weight": 8,
+  "min_range": 1,
+  "max_range": 1,
+  "durability": 35,
+  "effective_tags": [],
+  "is_magic": false
+}

@@ -1,0 +1,16 @@
+{
+  "id": "sword_adept",
+  "name": "剑术专精",
+  "type": "passive",
+  "trigger": "before_combat",
+  "cost": {},
+  "effect": {
+    "type": "stat_bonus",
+    "target": "self",
+    "stat": "str",
+    "value": 2,
+    "duration": 1
+  },
+  "description": "战斗时力量 +2",
+  "priority": 100
+}

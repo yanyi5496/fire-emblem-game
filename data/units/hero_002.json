@@ -1,0 +1,32 @@
+{
+  "id": "hero_002",
+  "name": "琳娜",
+  "job": "priest",
+  "level": 1,
+  "exp": 0,
+  "stats": {
+    "hp": 14,
+    "mp": 12,
+    "str": 1,
+    "mag": 6,
+    "skl": 5,
+    "spd": 5,
+    "def": 2,
+    "res": 7,
+    "luk": 6,
+    "mov": 5
+  },
+  "growth_rates": {
+    "hp": 60,
+    "mp": 60,
+    "str": 10,
+    "mag": 55,
+    "skl": 40,
+    "spd": 45,
+    "def": 20,
+    "res": 55,
+    "luk": 45
+  },
+  "inventory": ["heal_staff"],
+  "skills": ["heal_light"]
+}

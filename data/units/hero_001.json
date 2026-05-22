@@ -1,0 +1,32 @@
+{
+  "id": "hero_001",
+  "name": "艾克",
+  "job": "swordman",
+  "level": 1,
+  "exp": 0,
+  "stats": {
+    "hp": 18,
+    "mp": 0,
+    "str": 7,
+    "mag": 1,
+    "skl": 6,
+    "spd": 7,
+    "def": 4,
+    "res": 1,
+    "luk": 5,
+    "mov": 5
+  },
+  "growth_rates": {
+    "hp": 80,
+    "mp": 10,
+    "str": 50,
+    "mag": 15,
+    "skl": 45,
+    "spd": 55,
+    "def": 35,
+    "res": 20,
+    "luk": 40
+  },
+  "inventory": ["iron_sword"],
+  "skills": ["sword_adept"]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "swordman",
+  "name": "剑士",
+  "tier": 1,
+  "promotes_to": "swordmaster",
+  "weapons": ["sword"],
+  "mov": 5,
+  "growth_bonus": {
+    "str": 5,
+    "skl": 10,
+    "spd": 10
+  },
+  "terrain_adaptation": {
+    "forest": 1
+  },
+  "skills": []
+}

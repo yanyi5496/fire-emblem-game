@@ -1,0 +1,30 @@
+{
+  "id": "enemy_002",
+  "name": "山贼头目",
+  "job": "axefighter",
+  "level": 3,
+  "exp": 0,
+  "stats": {
+    "hp": 28,
+    "mp": 0,
+    "str": 11,
+    "mag": 0,
+    "skl": 5,
+    "spd": 5,
+    "def": 7,
+    "res": 2,
+    "luk": 3,
+    "mov": 5
+  },
+  "growth_rates": {
+    "hp": 85,
+    "str": 55,
+    "skl": 30,
+    "spd": 35,
+    "def": 40,
+    "res": 10,
+    "luk": 25
+  },
+  "inventory": ["iron_axe"],
+  "skills": ["tough_body"]
+}

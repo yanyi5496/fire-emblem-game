@@ -1,0 +1,16 @@
+{
+  "id": "tough_body",
+  "name": "强韧体魄",
+  "type": "passive",
+  "trigger": "on_damage",
+  "cost": {},
+  "effect": {
+    "type": "stat_bonus",
+    "target": "self",
+    "stat": "def",
+    "value": 3,
+    "duration": 1
+  },
+  "description": "被攻击时防御 +3",
+  "priority": 70
+}

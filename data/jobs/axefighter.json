@@ -1,0 +1,15 @@
+{
+  "id": "axefighter",
+  "name": "斧兵",
+  "tier": 1,
+  "promotes_to": "warrior",
+  "weapons": ["axe"],
+  "mov": 5,
+  "growth_bonus": {
+    "hp": 10,
+    "str": 10,
+    "def": 5
+  },
+  "terrain_adaptation": {},
+  "skills": []
+}
