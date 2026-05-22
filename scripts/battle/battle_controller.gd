@@ -7,21 +7,33 @@ signal battle_ended(result: String)
 signal unit_selected(unit: Node)
 signal action_executed(action: String)
 
-@onready var turn_manager: TurnManager = %TurnManager
-@onready var combat_manager: CombatManager = %CombatManager
-@onready var cursor: Node2D = %Cursor
-@onready var units_container: Node2D = %Units
-@onready var tile_map: TileMap = %GroundTileMap
-@onready var pathfinding: PathfindingService = %PathfindingService
+var combat_manager: CombatManager
+@onready var turn_manager: TurnManager = $TurnManager
+@onready var cursor: Node2D = $Cursor
+@onready var units_container: Node2D = $Units
+@onready var tile_map: TileMap = $MapRoot/GroundTileMap
+@onready var pathfinding: PathfindingService = $PathfindingService
 
 var map_data: Dictionary = {}
+var _battle_started_once := false
+
+func _ready() -> void:
+	combat_manager = CombatManager.new()
+	if GameState.current_map_id != "":
+		call_deferred("start_battle", GameState.current_map_id)
 
 func start_battle(map_id: String) -> void:
+	if _battle_started_once:
+		return
+	GameState.begin_battle(map_id, max(1, GameState.turn_number))
+	GameState.set_phase(GameState.GamePhase.BATTLE_PREP)
 	map_data = DataManager.get_map(map_id)
 	if map_data.is_empty():
 		push_error("Map data not found: ", map_id)
 		return
+	_battle_started_once = true
 	_spawn_units()
+	turn_manager.initialize_battle(GameState.turn_number)
 	turn_manager.start_turn("player")
 	battle_started.emit()
 

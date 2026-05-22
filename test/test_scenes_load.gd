@@ -25,6 +25,61 @@ func run() -> Dictionary:
 		"res://scenes/story/dialogue_box.tscn",
 		"res://scenes/story/choice_box.tscn",
 	]
+	var required_nodes := {
+		"res://scenes/battle/battle_scene.tscn": [
+			"MapRoot/GroundTileMap",
+			"Units",
+			"Cursor",
+			"TurnManager",
+			"PathfindingService",
+			"UI",
+		],
+		"res://scenes/battle/unit/unit.tscn": [
+			"AnimatedSprite2D",
+			"AnimationPlayer",
+		],
+		"res://scenes/battle/ui/battle_hud.tscn": [
+			"TurnLabel",
+			"UnitInfoPanel",
+			"ActionMenu",
+			"AttackPreview",
+		],
+		"res://scenes/battle/ui/action_menu.tscn": [
+			"VBoxContainer/MoveButton",
+			"VBoxContainer/AttackButton",
+			"VBoxContainer/SkillButton",
+			"VBoxContainer/WaitButton",
+		],
+		"res://scenes/battle/ui/attack_preview.tscn": [
+			"VBoxContainer/AttackerLabel",
+			"VBoxContainer/DefenderLabel",
+			"VBoxContainer/Buttons/ConfirmButton",
+			"VBoxContainer/Buttons/CancelButton",
+		],
+		"res://scenes/battle/ui/tile_info_panel.tscn": [
+			"VBoxContainer/TerrainLabel",
+			"VBoxContainer/MoveCostLabel",
+		],
+		"res://scenes/story/story_player.tscn": [
+			"DialogueBox",
+			"DialogueBox/MarginContainer/VBoxContainer/CharacterNameLabel",
+			"DialogueBox/MarginContainer/VBoxContainer/DialogueText",
+			"ChoiceContainer",
+		],
+		"res://scenes/menu/main_menu.tscn": [
+			"MarginContainer/VBoxContainer/NewGameButton",
+			"MarginContainer/VBoxContainer/ContinueButton",
+			"MarginContainer/VBoxContainer/SettingsButton",
+			"MarginContainer/VBoxContainer/QuitButton",
+		],
+		"res://scenes/menu/settings_menu.tscn": [
+			"MarginContainer/VBoxContainer/BackButton",
+		],
+		"res://scenes/menu/save_load_menu.tscn": [
+			"MarginContainer/VBoxContainer/LoadSlot1Button",
+			"MarginContainer/VBoxContainer/BackButton",
+		],
+	}
 
 	for sp in scene_paths:
 		var packed := load(sp) as PackedScene
@@ -34,7 +89,17 @@ func run() -> Dictionary:
 		else:
 			var can_instantiate := packed.can_instantiate()
 			if can_instantiate:
-				details.append("OK: %s" % sp)
+				var instance := packed.instantiate()
+				var missing_nodes: Array[String] = []
+				for node_path in required_nodes.get(sp, []):
+					if instance.get_node_or_null(NodePath(node_path)) == null:
+						missing_nodes.append(node_path)
+				if missing_nodes.is_empty():
+					details.append("OK: %s" % sp)
+				else:
+					details.append("MISSING NODES: %s -> %s" % [sp, ", ".join(missing_nodes)])
+					all_pass = false
+				instance.free()
 			else:
 				details.append("CANNOT INSTANTIATE: %s" % sp)
 				all_pass = false

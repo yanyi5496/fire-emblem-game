@@ -11,6 +11,7 @@ func run_all() -> void:
 	print("  Project Ember - MVP Test Suite")
 	print("========================================")
 	_run_test(TestDataSchema, "test_data_schema")
+	_run_test(TestGameStateFlow, "test_game_state_flow")
 	_run_test(TestScriptsLoad, "test_scripts_load")
 	_run_test(TestResourcesLoad, "test_resources_load")
 	_run_test(TestCombatFormula, "test_combat_formula")

@@ -4,12 +4,12 @@ class_name BattleHUD
 
 signal end_turn_pressed()
 
-@onready var turn_label: Label = %TurnLabel
-@onready var unit_info: Panel = %UnitInfoPanel
-@onready var unit_name_label: Label = %UnitNameLabel
-@onready var hp_label: Label = %HPLabel
-@onready var action_menu: Panel = %ActionMenu
-@onready var attack_preview: Panel = %AttackPreview
+@onready var turn_label: Label = $TurnLabel
+@onready var unit_info: Panel = $UnitInfoPanel
+@onready var unit_name_label: Label = $UnitInfoPanel/UnitNameLabel
+@onready var hp_label: Label = $UnitInfoPanel/HPLabel
+@onready var action_menu: Panel = $ActionMenu
+@onready var attack_preview: Panel = $AttackPreview
 
 func update_turn_info(phase: String, turn: int) -> void:
 	turn_label.text = "第 %d 回合 · %s 回合" % [turn, _phase_to_text(phase)]

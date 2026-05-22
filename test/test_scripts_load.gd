@@ -27,7 +27,11 @@ func run() -> Dictionary:
 		"res://scripts/ui/tile_info_panel.gd",
 		"res://scripts/story/story_parser.gd",
 		"res://scripts/story/story_player.gd",
+		"res://scripts/menu/main_menu.gd",
+		"res://scripts/menu/settings_menu.gd",
+		"res://scripts/menu/save_load_menu.gd",
 		"res://scripts/common/utils.gd",
+		"res://test/test_game_state_flow.gd",
 	]
 
 	for sp in script_paths:

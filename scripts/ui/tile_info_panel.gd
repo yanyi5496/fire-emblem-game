@@ -2,10 +2,10 @@ extends Panel
 
 class_name TileInfoPanel
 
-@onready var terrain_label: Label = %TerrainLabel
-@onready var move_cost_label: Label = %MoveCostLabel
-@onready var avoid_label: Label = %AvoidLabel
-@onready var defense_label: Label = %DefenseLabel
+@onready var terrain_label: Label = $VBoxContainer/TerrainLabel
+@onready var move_cost_label: Label = $VBoxContainer/MoveCostLabel
+@onready var avoid_label: Label = $VBoxContainer/AvoidLabel
+@onready var defense_label: Label = $VBoxContainer/DefenseLabel
 
 func show_tile_info(terrain_id: String, tile_data: Dictionary) -> void:
 	terrain_label.text = "地形: " + _terrain_name(terrain_id)

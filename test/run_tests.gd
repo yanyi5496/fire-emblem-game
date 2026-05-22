@@ -1,4 +1,3 @@
-#!/usr/bin/env -S godot --headless -s
 extends SceneTree
 
 func _initialize() -> void:

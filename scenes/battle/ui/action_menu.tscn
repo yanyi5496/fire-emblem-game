@@ -1,6 +1,25 @@
-[gd_scene load_steps=2 format=3
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/action_menu.gd" id="1"]
 
 [node name="ActionMenu" type="Panel"]
 script = ExtResource("1")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+
+[node name="MoveButton" type="Button" parent="VBoxContainer"]
+text = "移动"
+
+[node name="AttackButton" type="Button" parent="VBoxContainer"]
+text = "攻击"
+
+[node name="SkillButton" type="Button" parent="VBoxContainer"]
+text = "技能"
+
+[node name="WaitButton" type="Button" parent="VBoxContainer"]
+text = "待机"
+
+[connection signal="pressed" from="VBoxContainer/MoveButton" to="." method="_on_move_pressed"]
+[connection signal="pressed" from="VBoxContainer/AttackButton" to="." method="_on_attack_pressed"]
+[connection signal="pressed" from="VBoxContainer/SkillButton" to="." method="_on_skill_pressed"]
+[connection signal="pressed" from="VBoxContainer/WaitButton" to="." method="_on_wait_pressed"]

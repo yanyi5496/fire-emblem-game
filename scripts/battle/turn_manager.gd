@@ -11,15 +11,22 @@ enum Phase { PLAYER, ENEMY, NPC, ROUND_END }
 var current_phase: Phase = Phase.PLAYER
 var turn_number: int = 1
 
+func initialize_battle(starting_turn: int = 1) -> void:
+	turn_number = max(1, starting_turn)
+	GameState.set_turn(turn_number)
+
 func start_turn(phase_name: String) -> void:
 	match phase_name:
 		"player":
 			current_phase = Phase.PLAYER
 			_reset_unit_states()
+			GameState.set_phase(GameState.GamePhase.BATTLE_PLAYER)
 		"enemy":
 			current_phase = Phase.ENEMY
+			GameState.set_phase(GameState.GamePhase.BATTLE_ENEMY)
 		"npc":
 			current_phase = Phase.NPC
+			GameState.set_phase(GameState.GamePhase.BATTLE_NPC)
 	turn_started.emit(phase_name)
 
 func end_turn() -> void:
@@ -42,6 +49,7 @@ func _execute_round_end() -> void:
 	_process_skill_cooldowns()
 	_reset_unit_states()
 	turn_number += 1
+	GameState.set_turn(turn_number)
 	round_ended.emit()
 	start_turn("player")
 

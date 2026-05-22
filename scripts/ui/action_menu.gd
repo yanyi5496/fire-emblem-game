@@ -10,10 +10,10 @@ signal wait_selected()
 func show_for_unit(unit: UnitActor) -> void:
 	var can_move := unit.can_move()
 	var can_act := unit.can_act()
-	%MoveButton.visible = can_move
-	%AttackButton.visible = can_act
-	%SkillButton.visible = can_act and not unit.runtime_state.skills.is_empty()
-	%WaitButton.visible = true
+	$VBoxContainer/MoveButton.visible = can_move
+	$VBoxContainer/AttackButton.visible = can_act
+	$VBoxContainer/SkillButton.visible = can_act and not unit.runtime_state.skills.is_empty()
+	$VBoxContainer/WaitButton.visible = true
 	show()
 
 func _on_move_pressed() -> void:

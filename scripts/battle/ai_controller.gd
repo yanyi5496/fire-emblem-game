@@ -8,7 +8,7 @@ func execute_turn(units: Array[Node]) -> void:
 	for unit in units:
 		if not unit.is_alive():
 			continue
-		if unit.action_state != "Idle":
+		if unit.runtime_state.action_state != UnitRuntimeState.ActionState.IDLE:
 			continue
 		var action := _decide_action(unit)
 		_execute_action(unit, action)
@@ -29,7 +29,7 @@ func _find_targets(unit: Node) -> Array[Node]:
 	var result: Array[Node] = []
 	var units := get_tree().get_nodes_in_group("units")
 	for u in units:
-		if u.team == "enemy":
+		if u.team == unit.team:
 			continue
 		if not u.is_alive():
 			continue
@@ -40,12 +40,11 @@ func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var score := 0
 	var combat := CombatManager.new()
 	var result := combat.simulate(attacker, target, "")
-	if result.damage >= target.current_hp:
+	if result.damage >= target.get_current_hp():
 		score += 100
 	score += result.damage * 3
-	if target.current_hp < target.max_hp * 0.3:
+	if target.get_current_hp() < target.get_max_hp() * 0.3:
 		score += 30
-	combat.queue_free()
 	return score
 
 func _execute_action(unit: Node, action: Dictionary) -> void:

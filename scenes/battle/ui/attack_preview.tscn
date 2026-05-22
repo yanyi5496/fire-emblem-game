@@ -1,6 +1,37 @@
-[gd_scene load_steps=2 format=3
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/attack_preview.gd" id="1"]
 
 [node name="AttackPreview" type="Panel"]
 script = ExtResource("1")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+
+[node name="AttackerLabel" type="Label" parent="VBoxContainer"]
+text = "攻击方"
+
+[node name="DefenderLabel" type="Label" parent="VBoxContainer"]
+text = "防守方"
+
+[node name="HitRateLabel" type="Label" parent="VBoxContainer"]
+text = "命中 0%"
+
+[node name="DamageLabel" type="Label" parent="VBoxContainer"]
+text = "伤害 0"
+
+[node name="CounterLabel" type="Label" parent="VBoxContainer"]
+text = "反击: 命中 0%  伤害 0"
+
+[node name="FollowUpLabel" type="Label" parent="VBoxContainer"]
+text = "追击: 无"
+
+[node name="Buttons" type="HBoxContainer" parent="VBoxContainer"]
+
+[node name="ConfirmButton" type="Button" parent="VBoxContainer/Buttons"]
+text = "执行攻击"
+
+[node name="CancelButton" type="Button" parent="VBoxContainer/Buttons"]
+text = "取消"
+
+[connection signal="pressed" from="VBoxContainer/Buttons/ConfirmButton" to="." method="_on_confirm_pressed"]
+[connection signal="pressed" from="VBoxContainer/Buttons/CancelButton" to="." method="_on_cancel_pressed"]

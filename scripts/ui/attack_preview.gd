@@ -5,12 +5,12 @@ class_name AttackPreview
 signal attack_confirmed()
 signal attack_cancelled()
 
-@onready var attacker_label: Label = %AttackerLabel
-@onready var defender_label: Label = %DefenderLabel
-@onready var hit_rate_label: Label = %HitRateLabel
-@onready var damage_label: Label = %DamageLabel
-@onready var counter_label: Label = %CounterLabel
-@onready var follow_up_label: Label = %FollowUpLabel
+@onready var attacker_label: Label = $VBoxContainer/AttackerLabel
+@onready var defender_label: Label = $VBoxContainer/DefenderLabel
+@onready var hit_rate_label: Label = $VBoxContainer/HitRateLabel
+@onready var damage_label: Label = $VBoxContainer/DamageLabel
+@onready var counter_label: Label = $VBoxContainer/CounterLabel
+@onready var follow_up_label: Label = $VBoxContainer/FollowUpLabel
 
 func show_result(result: Dictionary) -> void:
 	attacker_label.text = result.get("attacker_id", "???")

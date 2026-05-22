@@ -14,10 +14,19 @@ signal action_state_changed(new_state: String)
 
 var runtime_state: UnitRuntimeState
 var grid_pos: Vector2i
-var is_alive: bool = true
+var _is_alive: bool = true
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
+
+func is_alive() -> bool:
+	return _is_alive and runtime_state != null and runtime_state.action_state != UnitRuntimeState.ActionState.DEAD
+
+func get_current_hp() -> int:
+	return runtime_state.current_hp if runtime_state else 0
+
+func get_max_hp() -> int:
+	return runtime_state.max_hp if runtime_state else 0
 
 func setup(id: String, unit_team: String, pos: Vector2i) -> void:
 	unit_id = id
@@ -64,6 +73,6 @@ func heal(amount: int) -> void:
 	healed.emit(runtime_state.current_hp - old)
 
 func die() -> void:
-	is_alive = false
+	_is_alive = false
 	runtime_state.action_state = UnitRuntimeState.ActionState.DEAD
 	died.emit()

@@ -13,9 +13,8 @@ func run() -> Dictionary:
 	var triangle_dmg := 1  # sword > axe
 	var def := 5
 	var terrain_def := 0
-	var expected_damage := max(0, str + weapon_might + triangle_dmg - (def + terrain_def))
-	var actual_damage := max(0, 7 + 5 + 1 - (5 + 0))
-	if actual_damage == 8 and expected_damage == 8:
+	var actual_damage := max(0, str + weapon_might + triangle_dmg - (def + terrain_def))
+	if actual_damage == 8:
 		details.append("PASS: physical damage = 8")
 	else:
 		details.append("FAIL: physical damage expected 8, got %d" % actual_damage)
@@ -31,9 +30,8 @@ func run() -> Dictionary:
 	var target_spd := 4
 	var target_luk := 2
 	var terrain_avoid := 0
-	var expected_hit := clampi(90 + 12 + 5 + 15 + 0 - (2 + 2 + 0), 0, 100)
 	var actual_hit := clampi(hit + skl*2 + luk + tri_hit + height - (target_spd/2 + target_luk + terrain_avoid), 0, 100)
-	if actual_hit == 100 and expected_hit == 100:
+	if actual_hit == 100:
 		details.append("PASS: hit rate = 100")
 	else:
 		details.append("FAIL: hit rate expected 100, got %d" % actual_hit)

@@ -18,6 +18,15 @@ config/icon="res://icon.svg"
 
 3d/physics_engine="Jolt Physics"
 
+[autoload]
+
+DataManager="*res://scripts/autoload/data_manager.gd"
+GameState="*res://scripts/autoload/game_state.gd"
+SceneRouter="*res://scripts/autoload/scene_router.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+AudioManager="*res://scripts/autoload/audio_manager.gd"
+InputManager="*res://scripts/autoload/input_manager.gd"
+
 [rendering]
 
 rendering_device/driver.windows="d3d12"

@@ -2,9 +2,21 @@ extends Node
 
 class_name SaveManager
 
-const SAVE_VERSION := "1.0.0"
+const SAVE_VERSION := "2.0.0"
 const MAX_SLOTS := 10
 const MAX_AUTO_SAVES := 5
+const REQUIRED_SAVE_FIELDS := [
+	"version",
+	"timestamp",
+	"chapter",
+	"map_id",
+	"turn",
+	"gold",
+	"inventory",
+	"story_flags",
+	"completed_maps",
+	"settings",
+]
 
 signal save_completed(slot: int)
 signal load_completed(slot: int)
@@ -35,26 +47,25 @@ func load_game(slot: int) -> Dictionary:
 		return {}
 	var data := json.get_data() as Dictionary
 	if _validate_version(data):
+		GameState.from_dict(data)
 		load_completed.emit(slot)
 		return data
 	return {}
 
 func _build_save_data() -> Dictionary:
-	return {
-		"version": SAVE_VERSION,
-		"timestamp": Time.get_unix_time_from_system(),
-		"chapter": "",
-		"turn_number": 0,
-		"units": [],
-		"map_state": {},
-		"inventory": [],
-		"gold": 0,
-		"story_flags": {},
-		"settings": {}
-	}
+	var state_data := GameState.to_dict()
+	state_data["version"] = SAVE_VERSION
+	state_data["timestamp"] = Time.get_unix_time_from_system()
+	state_data["settings"] = {}
+	return state_data
 
 func _get_save_path(slot: int) -> String:
 	return "user://save_%02d.save" % slot
 
 func _validate_version(data: Dictionary) -> bool:
-	return data.has("version")
+	if data.get("version", "") != SAVE_VERSION:
+		return false
+	for field_name in REQUIRED_SAVE_FIELDS:
+		if not data.has(field_name):
+			return false
+	return true
