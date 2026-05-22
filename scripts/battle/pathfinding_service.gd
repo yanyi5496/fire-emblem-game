@@ -11,14 +11,16 @@ func get_reachable_tiles(from: Vector2i, move_range: int, tile_map: TileMap) -> 
 	while index < queue.size():
 		var current = queue[index]
 		index += 1
-		result.append(current.pos)
-		for neighbor in _get_neighbors(current.pos):
+		var current_pos: Vector2i = current.get("pos", from)
+		var current_cost: int = current.get("cost", 0)
+		result.append(current_pos)
+		for neighbor in _get_neighbors(current_pos):
 			if visited.has(neighbor):
 				continue
 			var move_cost := _get_move_cost(neighbor, tile_map)
 			if move_cost < 0:
 				continue
-			var new_cost := current.cost + move_cost
+			var new_cost := current_cost + move_cost
 			if new_cost > move_range:
 				continue
 			visited[neighbor] = true

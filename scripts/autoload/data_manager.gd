@@ -20,7 +20,7 @@ func _load_directory(dir_name: String, target: Dictionary) -> void:
 	var path := "res://data/%s/" % dir_name
 	var dir := DirAccess.open(path)
 	if not dir:
-		push_warning("Data directory not found: ", path)
+		push_warning("Data directory not found: %s" % path)
 		return
 	dir.list_dir_begin()
 	var file_name := dir.get_next()
@@ -37,9 +37,9 @@ func _load_directory(dir_name: String, target: Dictionary) -> void:
 					if data.has("id"):
 						target[data["id"]] = data
 					else:
-						push_error("Missing 'id' in ", file_path)
+						push_error("Missing 'id' in %s" % file_path)
 				else:
-					push_error("JSON parse error in ", file_path, ": ", json.get_error_message())
+					push_error("JSON parse error in %s: %s" % [file_path, json.get_error_message()])
 		file_name = dir.get_next()
 
 func reload() -> void:

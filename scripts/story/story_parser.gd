@@ -47,7 +47,7 @@ static func parse_line(raw: String) -> Dictionary:
 static func parse_story(file_path: String) -> Array[Dictionary]:
 	var file := FileAccess.open(file_path, FileAccess.READ)
 	if not file:
-		push_error("Story file not found: ", file_path)
+		push_error("Story file not found: %s" % file_path)
 		return []
 	var lines: Array[Dictionary] = []
 	while file.get_position() < file.get_length():
@@ -55,6 +55,6 @@ static func parse_story(file_path: String) -> Array[Dictionary]:
 		if line.strip_edges().is_empty():
 			continue
 		var parsed := parse_line(line)
-		if parsed.type != LineType.UNKNOWN:
+		if parsed.get("type", LineType.UNKNOWN) != LineType.UNKNOWN:
 			lines.append(parsed)
 	return lines

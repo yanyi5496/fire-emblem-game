@@ -21,7 +21,7 @@ func _decide_action(unit: Node) -> Dictionary:
 	var best_action := { "type": "wait", "score": -999 }
 	for target in targets:
 		var score := _evaluate_attack(unit, target)
-		if score > best_action.score:
+		if score > best_action.get("score", -999):
 			best_action = { "type": "attack", "target": target, "score": score }
 	return best_action
 
@@ -40,16 +40,17 @@ func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var score := 0
 	var combat := CombatManager.new()
 	var result := combat.simulate(attacker, target, "")
-	if result.damage >= target.get_current_hp():
+	var damage := result.get("damage", 0)
+	if damage >= target.get_current_hp():
 		score += 100
-	score += result.damage * 3
+	score += damage * 3
 	if target.get_current_hp() < target.get_max_hp() * 0.3:
 		score += 30
 	return score
 
 func _execute_action(unit: Node, action: Dictionary) -> void:
-	match action.type:
+	match action.get("type", "wait"):
 		"attack":
-			unit.attack(action.target)
+			unit.attack(action.get("target"))
 		_:
 			unit.wait()

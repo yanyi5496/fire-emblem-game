@@ -22,7 +22,7 @@ func _run_test(test_class: GDScript, name: String) -> void:
 	print("\n--- %s ---" % name)
 	var instance := test_class.new()
 	if not instance.has_method("run"):
-		push_error("Test class missing run() method: ", name)
+		push_error("Test class missing run() method: %s" % name)
 		return
 	var result := instance.run()
 	instance.free()

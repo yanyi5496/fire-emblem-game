@@ -23,7 +23,7 @@ func remove_effect(unit: UnitActor, effect_type: String) -> void:
 
 func tick_all(units: Array[UnitActor]) -> void:
 	for unit in units:
-		if not unit.is_alive:
+		if not unit.is_alive():
 			continue
 		var effects := unit.runtime_state.status_effects
 		var updated: Array[Dictionary] = []

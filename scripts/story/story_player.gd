@@ -36,7 +36,7 @@ func _advance() -> void:
 		return
 	var line := _lines[_current_index]
 	_current_index += 1
-	match line.type:
+	match line.get("type", StoryParser.LineType.UNKNOWN):
 		StoryParser.LineType.NARRATOR:
 			_show_narrator()
 		StoryParser.LineType.CHARACTER:
@@ -73,10 +73,13 @@ func _show_dialogue(text: String) -> void:
 	dialogue_box.show()
 
 func _show_choices() -> void:
+	for child in choice_container.get_children():
+		child.queue_free()
+	choice_container.show()
 	var choice_index := 0
 	while _current_index < _lines.size():
 		var line := _lines[_current_index]
-		if line.type != StoryParser.LineType.DIALOGUE:
+		if line.get("type", StoryParser.LineType.UNKNOWN) != StoryParser.LineType.DIALOGUE:
 			break
 		_current_index += 1
 		var btn := Button.new()
@@ -115,6 +118,8 @@ func _name_to_portrait_id(display_name: String) -> String:
 
 func _finish() -> void:
 	_lines.clear()
+	for child in choice_container.get_children():
+		child.queue_free()
 	hide()
 	choice_container.hide()
 	GameState.set_phase(GameState.GamePhase.NONE)

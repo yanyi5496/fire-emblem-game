@@ -21,7 +21,7 @@ func show_unit_info(unit: UnitActor) -> void:
 	unit_info.show()
 	unit_name_label.text = unit.runtime_state.unit_name
 	var s := unit.runtime_state.get_stats()
-	hp_label.text = "HP %d/%d" % [s.hp, s.max_hp]
+	hp_label.text = "HP %d/%d" % [s.get("hp", 0), s.get("max_hp", 0)]
 
 func hide_unit_info() -> void:
 	unit_info.hide()

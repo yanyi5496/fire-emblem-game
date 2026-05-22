@@ -8,7 +8,7 @@ func play_bgm(bgm_id: String, fade_in: float = 0.5) -> void:
 	var path := "res://assets/audio/bgm/%s.ogg" % bgm_id
 	var stream := load(path) as AudioStream
 	if not stream:
-		push_warning("BGM not found: ", path)
+		push_warning("BGM not found: %s" % path)
 		return
 	_stop_current_bgm()
 	var player := AudioStreamPlayer.new()

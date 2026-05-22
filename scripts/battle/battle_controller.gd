@@ -29,7 +29,7 @@ func start_battle(map_id: String) -> void:
 	GameState.set_phase(GameState.GamePhase.BATTLE_PREP)
 	map_data = DataManager.get_map(map_id)
 	if map_data.is_empty():
-		push_error("Map data not found: ", map_id)
+		push_error("Map data not found: %s" % map_id)
 		return
 	_battle_started_once = true
 	_spawn_units()
@@ -46,7 +46,11 @@ func _spawn_units() -> void:
 func _spawn_unit(data: Dictionary) -> void:
 	var unit_scene := preload("res://scenes/battle/unit/unit.tscn")
 	var unit := unit_scene.instantiate()
-	unit.setup(data.unit_id, data.team, Vector2i(data.x, data.y))
+	unit.setup(
+		data.get("unit_id", ""),
+		data.get("team", ""),
+		Vector2i(data.get("x", 0), data.get("y", 0))
+	)
 	units_container.add_child(unit)
 
 func on_unit_clicked(unit: Node) -> void:

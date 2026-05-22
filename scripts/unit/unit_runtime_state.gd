@@ -34,7 +34,7 @@ var skills: Array[String] = []
 func setup_from_template(template_id: String) -> void:
 	var data := DataManager.get_unit(template_id)
 	if data.is_empty():
-		push_error("Unit template not found: ", template_id)
+		push_error("Unit template not found: %s" % template_id)
 		return
 	self.template_id = template_id
 	unit_name = data.get("name", "")

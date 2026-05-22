@@ -7,8 +7,7 @@ func run() -> Dictionary:
 	var all_pass := true
 
 	GameState.reset()
-	GameState.current_map_id = "mvp_map_01"
-	GameState.turn_number = 3
+	GameState.begin_battle("mvp_map_01", 3)
 	GameState.current_chapter = "chapter_01"
 	GameState.gold = 120
 	GameState.inventory = ["iron_sword"]
@@ -22,12 +21,33 @@ func run() -> Dictionary:
 		details.append("FAIL: GameState.to_dict lost map_id or turn")
 		all_pass = false
 
-	var version_check := SaveManager.SAVE_VERSION == "1.0.0"
-	if version_check:
-		details.append("PASS: save schema version is current")
+	var save_manager := SaveManager.new()
+	var valid_save := save_data.duplicate()
+	valid_save["version"] = SaveManager.SAVE_VERSION
+	valid_save["timestamp"] = 123456
+	valid_save["settings"] = {}
+	if save_manager._validate_version(valid_save):
+		details.append("PASS: save schema validation accepts current version")
 	else:
-		details.append("FAIL: unexpected SAVE_VERSION")
+		details.append("FAIL: save schema validation rejected current version")
 		all_pass = false
+
+	var legacy_save := {
+		"version": "1.0.0",
+		"timestamp": 123456,
+		"chapter": "chapter_01",
+		"turn_number": 2,
+		"inventory": [],
+		"gold": 0,
+		"story_flags": {},
+		"settings": {},
+	}
+	if not save_manager._validate_version(legacy_save):
+		details.append("PASS: save schema validation rejects legacy format")
+	else:
+		details.append("FAIL: save schema validation accepted legacy format")
+		all_pass = false
+	save_manager.free()
 
 	GameState.set_phase(GameState.GamePhase.STORY)
 	GameState.reset()

@@ -13,7 +13,7 @@ func goto(scene_key: String, params: Dictionary = {}) -> void:
 	var scene_path := _get_scene_path(scene_key)
 	var result := get_tree().change_scene_to_file(scene_path)
 	if result != OK:
-		push_error("Failed to load scene: ", scene_path)
+		push_error("Failed to load scene: %s" % scene_path)
 		return
 	after_scene_change.emit(scene_key)
 
@@ -32,5 +32,5 @@ func _get_scene_path(key: String) -> String:
 		"boot":
 			return "res://scenes/boot/boot_scene.tscn"
 		_:
-			push_error("Unknown scene key: ", key)
+			push_error("Unknown scene key: %s" % key)
 			return "res://scenes/boot/boot_scene.tscn"
