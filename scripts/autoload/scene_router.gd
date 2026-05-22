@@ -1,7 +1,5 @@
 extends Node
 
-class_name SceneRouter
-
 enum TransitionType {
 	FADE,
 	INSTANT,

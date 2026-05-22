@@ -1,7 +1,5 @@
 extends Node
 
-class_name SaveManager
-
 const SAVE_VERSION := "2.0.0"
 const MAX_SLOTS := 10
 const MAX_AUTO_SAVES := 5

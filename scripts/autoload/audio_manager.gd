@@ -1,7 +1,5 @@
 extends Node
 
-class_name AudioManager
-
 enum Bus { MASTER = 0, BGM = 1, SFX = 2, VOICE = 3 }
 
 var _current_bgm: AudioStreamPlayer = null

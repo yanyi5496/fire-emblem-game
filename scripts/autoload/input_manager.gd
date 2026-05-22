@@ -1,7 +1,5 @@
 extends Node
 
-class_name InputManager
-
 signal move_cursor(direction: Vector2)
 signal confirm_pressed()
 signal cancel_pressed()

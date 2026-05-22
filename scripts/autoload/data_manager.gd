@@ -1,7 +1,5 @@
 extends Node
 
-class_name DataManager
-
 var _units := {}
 var _weapons := {}
 var _jobs := {}
