@@ -2,6 +2,17 @@ extends RefCounted
 
 class_name TestSceneContracts
 
+const CLASS_TO_SCRIPT := {
+	"BootController": "res://scripts/boot/boot_controller.gd",
+	"MainMenu": "res://scripts/menu/main_menu.gd",
+	"StoryPlayer": "res://scripts/story/story_player.gd",
+	"BattleController": "res://scripts/battle/battle_controller.gd",
+	"TurnManager": "res://scripts/battle/turn_manager.gd",
+	"BattleHUD": "res://scripts/ui/battle_hud.gd",
+	"ActionMenu": "res://scripts/ui/action_menu.gd",
+	"AttackPreview": "res://scripts/ui/attack_preview.gd",
+}
+
 func run() -> Dictionary:
 	var details: Array[String] = []
 	var all_pass := true
@@ -60,10 +71,18 @@ func run() -> Dictionary:
 		"details": details
 	}
 
-func _check_class(class_name: String, expected_methods: Array[String]) -> bool:
-	if not ClassDB.class_exists(class_name):
+func _check_class(cls_name: String, expected_methods: Array) -> bool:
+	var script_path := CLASS_TO_SCRIPT.get(cls_name, "")
+	if script_path.is_empty():
 		return false
+	var script := load(script_path) as GDScript
+	if not script:
+		return false
+	var method_list: Array[Dictionary] = script.get_script_method_list()
+	var method_names: Array[String] = []
+	for m in method_list:
+		method_names.append(m.get("name", ""))
 	for method in expected_methods:
-		if not ClassDB.has_method(class_name, method, false):
+		if not method in method_names:
 			return false
 	return true

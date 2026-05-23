@@ -2,6 +2,12 @@ extends Node
 
 class_name BattleController
 
+const _combat_dep := preload("res://scripts/battle/combat_manager.gd")
+const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
+const _turn_mgr_dep := preload("res://scripts/battle/turn_manager.gd")
+const _pathfind_dep := preload("res://scripts/battle/pathfinding_service.gd")
+const _urs_dep := preload("res://scripts/unit/unit_runtime_state.gd")
+
 signal battle_started()
 signal battle_ended(result: String)
 signal unit_selected(unit: Node)
@@ -9,27 +15,27 @@ signal action_executed(action: String)
 
 enum BattleInteractionState { IDLE, UNIT_SELECTED, MOVING, ACTION_MENU, TARGETING, ATTACK_PREVIEW }
 
-var combat_manager: CombatManager
+var combat_manager
 var interaction_state: BattleInteractionState = BattleInteractionState.IDLE
-var selected_unit: UnitActor = null
+var selected_unit = null
 var movement_tiles: Array[Vector2i] = []
-var attack_targets: Array[UnitActor] = []
-var pending_target: UnitActor = null
+var attack_targets: Array = []
+var pending_target = null
 var pending_combat_result: Dictionary = {}
 var battle_hud: Node = null
 
-@onready var turn_manager: TurnManager = $TurnManager
+@onready var turn_manager = $TurnManager
 @onready var cursor: Node2D = $Cursor
 @onready var units_container: Node2D = $Units
 @onready var tile_map: TileMap = $MapRoot/GroundTileMap
 @onready var highlight_tile_map: TileMap = $MapRoot/HighlightTileMap
-@onready var pathfinding: PathfindingService = $PathfindingService
+@onready var pathfinding = $PathfindingService
 
 var map_data: Dictionary = {}
 var _battle_started_once := false
 
 func _ready() -> void:
-	combat_manager = CombatManager.new()
+	combat_manager = _combat_dep.new()
 	if not InputManager.confirm_pressed.is_connected(_on_confirm):
 		InputManager.confirm_pressed.connect(_on_confirm)
 	if not InputManager.cancel_pressed.is_connected(_on_cancel):
@@ -140,8 +146,8 @@ func _deselect_unit() -> void:
 	interaction_state = BattleInteractionState.IDLE
 	_clear_highlights()
 
-func _show_movement_range(unit: UnitActor) -> void:
-	var move_range := unit.runtime_state.mov_stat
+func _show_movement_range(unit) -> void:
+	var move_range: int = unit.runtime_state.mov_stat
 	movement_tiles = pathfinding.get_reachable_tiles(unit.grid_pos, move_range, tile_map)
 	_highlight_tiles(movement_tiles)
 
@@ -164,7 +170,7 @@ func _start_movement() -> void:
 		return
 	selected_unit.grid_pos = target_pos
 	selected_unit.position = Vector2(target_pos.x * 64, target_pos.y * 64)
-	selected_unit.runtime_state.action_state = UnitRuntimeState.ActionState.MOVED
+	selected_unit.runtime_state.action_state = _urs_dep.ActionState.MOVED
 	_clear_highlights()
 	interaction_state = BattleInteractionState.ACTION_MENU
 	if battle_hud and battle_hud.has_method("show_action_menu"):
@@ -182,7 +188,7 @@ func _try_attack_target() -> void:
 	var cursor_pos := Vector2i(cursor.position.x / 64, cursor.position.y / 64)
 	for target in attack_targets:
 		if target.grid_pos == cursor_pos:
-			var weapon_id := selected_unit.runtime_state.equipped_weapon
+			var weapon_id: String = selected_unit.runtime_state.equipped_weapon
 			if weapon_id == "":
 				return
 			pending_target = target
@@ -217,10 +223,10 @@ func _on_action_wait() -> void:
 func _on_attack_confirmed() -> void:
 	if not selected_unit or not pending_target:
 		return
-	var weapon_id := selected_unit.runtime_state.equipped_weapon
+	var weapon_id: String = selected_unit.runtime_state.equipped_weapon
 	if weapon_id == "":
 		return
-	var target := pending_target
+	var target: Node = pending_target
 	interaction_state = BattleInteractionState.IDLE
 	selected_unit.attack(target)
 	combat_manager.execute(selected_unit, target, weapon_id)
@@ -246,8 +252,8 @@ func _execute_action_complete() -> void:
 	if battle_hud and battle_hud.has_method("hide_action_menu"):
 		battle_hud.hide_action_menu()
 
-func _get_enemies_in_range(unit: UnitActor) -> Array[UnitActor]:
-	var result: Array[UnitActor] = []
+func _get_enemies_in_range(unit) -> Array:
+	var result: Array = []
 	var weapon_data: Dictionary = DataManager.get_weapon(unit.runtime_state.equipped_weapon)
 	if weapon_data.is_empty():
 		return result
@@ -255,7 +261,7 @@ func _get_enemies_in_range(unit: UnitActor) -> Array[UnitActor]:
 	var max_range: int = weapon_data.get("max_range", 1)
 	var attack_tiles: Array[Vector2i] = pathfinding.get_attack_range(unit.grid_pos, min_range, max_range, tile_map)
 	for attack_tile in attack_tiles:
-		var enemy: UnitActor = get_unit_at(attack_tile)
+		var enemy = get_unit_at(attack_tile)
 		if enemy and enemy.team != unit.team and enemy.is_alive():
 			result.append(enemy)
 	return result
@@ -263,7 +269,7 @@ func _get_enemies_in_range(unit: UnitActor) -> Array[UnitActor]:
 func on_unit_clicked(unit: Node) -> void:
 	unit_selected.emit(unit)
 
-func get_unit_at(pos: Vector2i) -> UnitActor:
+func get_unit_at(pos: Vector2i):
 	for unit in units_container.get_children():
 		if unit.grid_pos == pos and unit.is_alive():
 			return unit

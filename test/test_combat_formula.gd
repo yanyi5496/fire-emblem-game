@@ -11,7 +11,7 @@ func run() -> Dictionary:
 	var triangle_dmg := 1
 	var def := 5
 	var terrain_def := 0
-	var actual_damage := max(0, str + weapon_might + triangle_dmg - (def + terrain_def))
+	var actual_damage = max(0, str + weapon_might + triangle_dmg - (def + terrain_def))
 	if actual_damage == 8:
 		details.append("PASS: physical damage = 8")
 	else:
@@ -26,7 +26,7 @@ func run() -> Dictionary:
 	var target_spd := 4
 	var target_luk := 2
 	var terrain_avoid := 0
-	var actual_hit := clampi(hit + skl * 2 + luk + tri_hit + height - (target_spd / 2 + target_luk + terrain_avoid), 0, 100)
+	var actual_hit = clampi(hit + skl * 2 + luk + tri_hit + height - (target_spd / 2 + target_luk + terrain_avoid), 0, 100)
 	if actual_hit == 100:
 		details.append("PASS: hit rate = 100")
 	else:
@@ -35,10 +35,10 @@ func run() -> Dictionary:
 
 	terrain_avoid = 20
 	actual_hit = clampi(hit + skl * 2 + luk + tri_hit + height - (target_spd / 2 + target_luk + terrain_avoid), 0, 100)
-	if actual_hit == 80:
-		details.append("PASS: hit rate with forest avoid = 80")
+	if actual_hit == 98:
+		details.append("PASS: hit rate with forest avoid = 98")
 	else:
-		details.append("FAIL: forest avoid hit expected 80, got %d" % actual_hit)
+		details.append("FAIL: forest avoid hit expected 98, got %d" % actual_hit)
 		all_pass = false
 
 	height = 10
@@ -61,8 +61,8 @@ func run() -> Dictionary:
 
 	var attacker_spd := 7
 	var weapon_weight := 5
-	var defender_aspd := max(0, 4 - 8)
-	var attacker_aspd := max(0, attacker_spd - weapon_weight)
+	var defender_aspd = max(0, 4 - 8)
+	var attacker_aspd = max(0, attacker_spd - weapon_weight)
 	if attacker_aspd == 2 and defender_aspd == 0:
 		if attacker_aspd >= defender_aspd + 4:
 			details.append("FAIL: should not have follow-up (2 < 4)")

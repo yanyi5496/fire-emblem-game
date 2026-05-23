@@ -2,6 +2,8 @@ extends CanvasLayer
 
 class_name StoryPlayer
 
+const _story_parser_dep := preload("res://scripts/story/story_parser.gd")
+
 const DEFAULT_BATTLE_MAP_ID := "mvp_map_01"
 const DEFAULT_STORY_PATH := "res://data/stories/mvp_story_01.txt"
 
@@ -25,12 +27,14 @@ func _ready() -> void:
 	choice_container.hide()
 	if not InputManager.confirm_pressed.is_connected(_on_confirm_pressed):
 		InputManager.confirm_pressed.connect(_on_confirm_pressed)
+	if not dialogue_box.gui_input.is_connected(_on_dialogue_box_gui_input):
+		dialogue_box.gui_input.connect(_on_dialogue_box_gui_input)
 	if _lines.is_empty():
 		call_deferred("play_story", DEFAULT_STORY_PATH)
 
 func play_story(file_path: String) -> void:
 	GameState.set_phase(GameState.GamePhase.STORY)
-	_lines = StoryParser.parse_story(file_path)
+	_lines = _story_parser_dep.parse_story(file_path)
 	_current_index = 0
 	_current_character = ""
 	_is_narrator_mode = true
@@ -43,22 +47,22 @@ func _advance() -> void:
 		return
 	var line := _lines[_current_index]
 	_current_index += 1
-	match line.get("type", StoryParser.LineType.UNKNOWN):
-		StoryParser.LineType.NARRATOR:
+	match line.get("type", _story_parser_dep.LineType.UNKNOWN):
+		_story_parser_dep.LineType.NARRATOR:
 			_show_narrator()
 			_advance()
-		StoryParser.LineType.CHARACTER:
+		_story_parser_dep.LineType.CHARACTER:
 			_current_character = line.get("name", "")
 			_show_character(_current_character, "")
 			_advance()
-		StoryParser.LineType.DIALOGUE:
+		_story_parser_dep.LineType.DIALOGUE:
 			_show_dialogue(line.get("content", ""))
-		StoryParser.LineType.BGM:
+		_story_parser_dep.LineType.BGM:
 			AudioManager.play_bgm(line.get("bgm_id", ""))
 			_advance()
-		StoryParser.LineType.EVENT:
+		_story_parser_dep.LineType.EVENT:
 			_handle_event(line.get("event_id", ""))
-		StoryParser.LineType.CHOICE:
+		_story_parser_dep.LineType.CHOICE:
 			_show_choices()
 		_:
 			_advance()
@@ -95,7 +99,7 @@ func _show_choices() -> void:
 	var choice_index := 0
 	while _current_index < _lines.size():
 		var line := _lines[_current_index]
-		if line.get("type", StoryParser.LineType.UNKNOWN) != StoryParser.LineType.DIALOGUE:
+		if line.get("type", _story_parser_dep.LineType.UNKNOWN) != _story_parser_dep.LineType.DIALOGUE:
 			break
 		_current_index += 1
 		var btn := Button.new()
@@ -118,6 +122,14 @@ func _on_confirm_pressed() -> void:
 	if choice_container.visible:
 		return
 	_advance()
+
+func _on_dialogue_box_gui_input(event: InputEvent) -> void:
+	if GameState.current_phase != GameState.GamePhase.STORY:
+		return
+	if choice_container.visible:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_advance()
 
 func _handle_event(event_id: String) -> void:
 	match event_id:

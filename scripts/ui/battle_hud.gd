@@ -2,6 +2,8 @@ extends CanvasLayer
 
 class_name BattleHUD
 
+const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
+
 signal end_turn_pressed()
 
 @onready var turn_label: Label = $TurnLabel
@@ -14,13 +16,13 @@ signal end_turn_pressed()
 func update_turn_info(phase: String, turn: int) -> void:
 	turn_label.text = "第 %d 回合 · %s 回合" % [turn, _phase_to_text(phase)]
 
-func show_unit_info(unit: UnitActor) -> void:
+func show_unit_info(unit) -> void:
 	if not unit or not unit.runtime_state:
 		hide_unit_info()
 		return
 	unit_info.show()
 	unit_name_label.text = unit.runtime_state.unit_name
-	var s := unit.runtime_state.get_stats()
+	var s: Dictionary = unit.runtime_state.get_stats()
 	hp_label.text = "HP %d/%d" % [s.get("hp", 0), s.get("max_hp", 0)]
 
 func hide_unit_info() -> void:

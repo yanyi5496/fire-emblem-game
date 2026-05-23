@@ -21,12 +21,11 @@ func run() -> Dictionary:
 		details.append("FAIL: GameState.to_dict lost map_id or turn")
 		all_pass = false
 
-	var save_manager := SaveManager.new()
 	var valid_save := save_data.duplicate()
 	valid_save["version"] = SaveManager.SAVE_VERSION
 	valid_save["timestamp"] = 123456
 	valid_save["settings"] = {}
-	if save_manager._validate_version(valid_save):
+	if SaveManager._validate_version(valid_save):
 		details.append("PASS: save schema validation accepts current version")
 	else:
 		details.append("FAIL: save schema validation rejected current version")
@@ -42,12 +41,11 @@ func run() -> Dictionary:
 		"story_flags": {},
 		"settings": {},
 	}
-	if not save_manager._validate_version(legacy_save):
+	if not SaveManager._validate_version(legacy_save):
 		details.append("PASS: save schema validation rejects legacy format")
 	else:
 		details.append("FAIL: save schema validation accepted legacy format")
 		all_pass = false
-	save_manager.free()
 
 	GameState.set_phase(GameState.GamePhase.STORY)
 	GameState.reset()

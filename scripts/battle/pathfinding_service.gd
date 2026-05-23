@@ -34,7 +34,7 @@ func get_attack_range(from: Vector2i, min_range: int, max_range: int, tile_map: 
 	var result: Array[Vector2i] = []
 	for dx in range(-max_range, max_range + 1):
 		for dy in range(-max_range, max_range + 1):
-			var dist := abs(dx) + abs(dy)
+			var dist = abs(dx) + abs(dy)
 			if dist >= min_range and dist <= max_range:
 				result.append(Vector2i(from.x + dx, from.y + dy))
 	return result
@@ -51,7 +51,7 @@ func _get_move_cost(pos: Vector2i, tile_map: TileMap) -> int:
 	var tile_data := tile_map.get_cell_tile_data(0, pos)
 	if not tile_data:
 		return 1
-	var cost := tile_data.get_custom_data("move_cost")
+	var cost = tile_data.get_custom_data("move_cost")
 	if cost == null:
 		return 1
 	return cost

@@ -32,7 +32,7 @@ var inventory: Array[String] = []
 var skills: Array[String] = []
 
 func setup_from_template(template_id: String) -> void:
-	var data := DataManager.get_unit(template_id)
+	var data: Dictionary = DataManager.get_unit(template_id)
 	if data.is_empty():
 		push_error("Unit template not found: %s" % template_id)
 		return
@@ -42,7 +42,7 @@ func setup_from_template(template_id: String) -> void:
 	level = data.get("level", 1)
 	exp = data.get("exp", 0)
 
-	var stats := data.get("stats", {})
+	var stats: Dictionary = data.get("stats", {})
 	max_hp = stats.get("hp", 1)
 	current_hp = max_hp
 	max_mp = stats.get("mp", 0)

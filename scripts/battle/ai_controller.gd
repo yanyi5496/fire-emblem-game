@@ -2,13 +2,16 @@ extends Node
 
 class_name AIController
 
+const _urs_dep := preload("res://scripts/unit/unit_runtime_state.gd")
+const _combat_dep := preload("res://scripts/battle/combat_manager.gd")
+
 enum AIType { AGGRESSIVE, DEFENSIVE, SUPPORT, BOSS, PATROL }
 
 func execute_turn(units: Array[Node]) -> void:
 	for unit in units:
 		if not unit.is_alive():
 			continue
-		if unit.runtime_state.action_state != UnitRuntimeState.ActionState.IDLE:
+		if unit.runtime_state.action_state != _urs_dep.ActionState.IDLE:
 			continue
 		var action := _decide_action(unit)
 		_execute_action(unit, action)
@@ -38,9 +41,9 @@ func _find_targets(unit: Node) -> Array[Node]:
 
 func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var score := 0
-	var combat := CombatManager.new()
-	var result := combat.simulate(attacker, target, "")
-	var damage := result.get("damage", 0)
+	var combat = _combat_dep.new()
+	var result = combat.simulate(attacker, target, "")
+	var damage = result.get("damage", 0)
 	if damage >= target.get_current_hp():
 		score += 100
 	score += damage * 3

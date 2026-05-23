@@ -2,14 +2,16 @@ extends Panel
 
 class_name ActionMenu
 
+const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
+
 signal move_selected()
 signal attack_selected()
 signal skill_selected()
 signal wait_selected()
 
-func show_for_unit(unit: UnitActor) -> void:
-	var can_move := unit.can_move()
-	var can_act := unit.can_act()
+func show_for_unit(unit) -> void:
+	var can_move: bool = unit.can_move()
+	var can_act: bool = unit.can_act()
 	$VBoxContainer/MoveButton.visible = can_move
 	$VBoxContainer/AttackButton.visible = can_act
 	$VBoxContainer/SkillButton.visible = can_act and not unit.runtime_state.skills.is_empty()

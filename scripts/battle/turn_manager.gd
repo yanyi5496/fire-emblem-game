@@ -2,6 +2,9 @@ extends Node
 
 class_name TurnManager
 
+const _ai_dep := preload("res://scripts/battle/ai_controller.gd")
+const _ses_dep := preload("res://scripts/unit/status_effect_service.gd")
+
 signal turn_started(phase: String)
 signal turn_ended(phase: String)
 signal round_ended()
@@ -10,12 +13,12 @@ enum Phase { PLAYER, ENEMY, NPC, ROUND_END }
 
 var current_phase: Phase = Phase.PLAYER
 var turn_number: int = 1
-var ai_controller: AIController
+var ai_controller
 
 func initialize_battle(starting_turn: int = 1) -> void:
 	turn_number = max(1, starting_turn)
 	GameState.set_turn(turn_number)
-	ai_controller = AIController.new()
+	ai_controller = _ai_dep.new()
 
 func start_turn(phase_name: String) -> void:
 	match phase_name:
@@ -82,7 +85,7 @@ func _reset_unit_states() -> void:
 			unit.reset_action_state()
 
 func _process_buff_ticks() -> void:
-	var service := StatusEffectService.new()
+	var service = _ses_dep.new()
 	var units := get_tree().get_nodes_in_group("units")
 	service.tick_all(units)
 
