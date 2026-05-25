@@ -347,6 +347,7 @@ func _on_attack_confirmed() -> void:
 	skill_service.apply_unit_passives(target, "before_combat")
 	selected_unit.attack(target)
 	combat_manager.execute(selected_unit, target, weapon_id, skill_service)
+	_distribute_combat_exp(selected_unit, target)
 	skill_service.apply_unit_passives(selected_unit, "after_combat")
 	skill_service.apply_unit_passives(target, "after_combat")
 	skill_service.clear_temporary_passives(selected_unit)
@@ -358,6 +359,7 @@ func _on_attack_confirmed() -> void:
 	selected_unit = null
 	if battle_hud and battle_hud.has_method("hide_attack_preview"):
 		battle_hud.hide_attack_preview()
+	_process_level_ups()
 	_check_battle_end()
 
 func _on_attack_cancelled() -> void:
@@ -477,6 +479,31 @@ func has_battle_ended() -> bool:
 func get_battle_result() -> String:
 	return check_victory_condition()
 
+func _distribute_combat_exp(attacker: Node, defender: Node) -> void:
+	if not attacker.runtime_state or not defender.runtime_state:
+		return
+	var def_level: int = defender.runtime_state.level
+	var exp_gain: int = def_level * 10 + 20
+	if not defender.is_alive():
+		exp_gain += 20
+	var gained: Array[Dictionary] = attacker.runtime_state.gain_exp(exp_gain)
+	for lu in gained:
+		lu["unit_name"] = attacker.unit_id
+
+func _distribute_victory_exp() -> void:
+	for unit in units_container.get_children():
+		if unit.is_alive() and unit.team == "player" and unit.runtime_state:
+			var gained: Array[Dictionary] = unit.runtime_state.gain_exp(5)
+			for lu in gained:
+				lu["unit_name"] = unit.unit_id
+
+func _process_level_ups() -> void:
+	for unit in units_container.get_children():
+		if unit.runtime_state:
+			var pending: Array[Dictionary] = unit.runtime_state.pending_level_ups
+			if not pending.is_empty():
+				unit.runtime_state.pending_level_ups = []
+
 func _check_battle_end() -> bool:
 	var result := check_victory_condition()
 	if result != "":
@@ -487,6 +514,9 @@ func _check_battle_end() -> bool:
 func end_battle(result: String) -> void:
 	if GameState.current_phase == GameState.GamePhase.BATTLE_RESULT:
 		return
+	if result == "victory":
+		_distribute_victory_exp()
+	_process_level_ups()
 	battle_lifecycle.finalize_battle(
 		result,
 		units_container,

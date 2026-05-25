@@ -252,6 +252,18 @@ func _on_post_battle_story_end() -> void:
 		GameState.set_resume_scene("main_menu")
 
 func _handle_event(event_id: String) -> void:
+	if event_id.begins_with("promote_unit:"):
+		var parts := event_id.trim_prefix("promote_unit:").split("→")
+		if parts.size() == 2:
+			var unit_name: String = parts[0].strip_edges()
+			var new_job: String = parts[1].strip_edges()
+			for unit in get_tree().get_nodes_in_group("units"):
+				if unit.unit_id == unit_name and unit.runtime_state:
+					unit.runtime_state.promote_to(new_job)
+					push_warning("Unit %s promoted to %s" % [unit_name, new_job])
+					break
+		_advance()
+		return
 	match event_id:
 		"load_map":
 			if GameState.current_map_id == "":

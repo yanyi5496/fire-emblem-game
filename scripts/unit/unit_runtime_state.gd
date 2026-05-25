@@ -24,6 +24,7 @@ var mov_stat: int = 5
 
 var level: int = 1
 var exp: int = 0
+var pending_level_ups: Array[Dictionary] = []
 
 var action_state: ActionState = ActionState.IDLE
 var status_effects: Array[Dictionary] = []
@@ -102,6 +103,70 @@ func setup_from_template(template_id: String) -> void:
 	if not inventory.is_empty():
 		equipped_weapon = inventory[0]
 		get_weapon_durability(equipped_weapon)
+
+func get_growth_rates() -> Dictionary:
+	var data: Dictionary = DataManager.get_unit(template_id)
+	var rates: Dictionary = data.get("growth_rates", {}).duplicate()
+	var job_data: Dictionary = DataManager.get_job(job_id)
+	var bonus: Dictionary = job_data.get("growth_bonus", {})
+	for stat_name in rates:
+		rates[stat_name] = int(rates[stat_name]) + int(bonus.get(stat_name, 0))
+	return rates
+
+func gain_exp(amount: int) -> Array[Dictionary]:
+	exp += amount
+	var levels: Array[Dictionary] = []
+	while exp >= 100:
+		exp -= 100
+		level += 1
+		var gained: Dictionary = _roll_stats()
+		levels.append(gained)
+		current_hp = max_hp
+	return levels
+
+func _roll_stats() -> Dictionary:
+	var gained: Dictionary = {}
+	var rates: Dictionary = get_growth_rates()
+	for stat_name in ["hp", "mp", "str", "mag", "skl", "spd", "def", "res", "luk"]:
+		var rate: int = int(rates.get(stat_name, 0))
+		if randi() % 100 < rate:
+			_apply_stat_growth(stat_name, 1)
+			gained[stat_name] = gained.get(stat_name, 0) + 1
+	pending_level_ups.append(gained)
+	return gained
+
+func _apply_stat_growth(stat_name: String, amount: int) -> void:
+	match stat_name:
+		"hp": max_hp += amount; current_hp = min(current_hp + amount, max_hp)
+		"mp": max_mp += amount; current_mp = min(current_mp + amount, max_mp)
+		"str": str_stat = min(30, str_stat + amount)
+		"mag": mag_stat = min(30, mag_stat + amount)
+		"skl": skl_stat = min(30, skl_stat + amount)
+		"spd": spd_stat = min(30, spd_stat + amount)
+		"def": def_stat = min(30, def_stat + amount)
+		"res": res_stat = min(30, res_stat + amount)
+		"luk": luk_stat = min(30, luk_stat + amount)
+
+func promote_to(new_job_id: String) -> void:
+	var new_job: Dictionary = DataManager.get_job(new_job_id)
+	if new_job.is_empty():
+		push_error("Promotion target job not found: %s" % new_job_id)
+		return
+	job_id = new_job_id
+	var new_weapons: Array = new_job.get("weapons", [])
+	for wid in new_weapons:
+		if str(wid) not in inventory:
+			inventory.append(str(wid))
+	if equipped_weapon == "" and not inventory.is_empty():
+		equipped_weapon = inventory[0]
+	var new_skills: Array = new_job.get("skills", [])
+	for sid in new_skills:
+		var sid_str: String = str(sid)
+		if sid_str not in skills:
+			skills.append(sid_str)
+			var skill_data: Dictionary = DataManager.get_skill(sid_str)
+			if skill_data.get("type", "") == "active":
+				skill_cooldowns[sid_str] = 0
 
 func get_stats() -> Dictionary:
 	return {
