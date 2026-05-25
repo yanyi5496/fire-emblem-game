@@ -22,6 +22,8 @@ func run() -> Dictionary:
 		"res://scripts/battle/ai_controller.gd",
 		"res://scripts/battle/turn_manager.gd",
 		"res://scripts/battle/battle_controller.gd",
+		"res://scripts/battle/victory_judge.gd",
+		"res://scripts/battle/battle_query_service.gd",
 		"res://scripts/ui/battle_hud.gd",
 		"res://scripts/ui/action_menu.gd",
 		"res://scripts/ui/attack_preview.gd",

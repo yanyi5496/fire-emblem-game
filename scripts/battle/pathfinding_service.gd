@@ -2,6 +2,12 @@ extends Node
 
 class_name PathfindingService
 
+var battle_query = null
+
+func _ready() -> void:
+	if get_parent() and get_parent().has_node("BattleQueryService"):
+		battle_query = get_parent().get_node("BattleQueryService")
+
 func get_reachable_tiles(from: Vector2i, move_range: int, tile_map: TileMap) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	var frontier: Array[Dictionary] = [{ "pos": from, "cost": 0 }]
@@ -85,6 +91,8 @@ func _get_move_cost(pos: Vector2i, tile_map: TileMap) -> int:
 	return int(terrain_data.get("move_cost", 1))
 
 func _get_runtime_terrain_data(tile_map: TileMap, pos: Vector2i) -> Dictionary:
+	if battle_query and battle_query.has_method("get_terrain_data_at"):
+		return battle_query.get_terrain_data_at(pos)
 	var scene = _get_battle_controller(tile_map)
 	if scene and scene.has_method("get_terrain_data_at"):
 		return scene.get_terrain_data_at(pos)
@@ -100,6 +108,8 @@ func _can_step_on(tile_map: TileMap, pos: Vector2i, destination: Vector2i) -> bo
 	return unit == null
 
 func _get_runtime_unit_at(tile_map: TileMap, pos: Vector2i):
+	if battle_query and battle_query.has_method("get_unit_at"):
+		return battle_query.get_unit_at(pos)
 	var scene = _get_battle_controller(tile_map)
 	if scene and scene.has_method("get_unit_at"):
 		return scene.get_unit_at(pos)

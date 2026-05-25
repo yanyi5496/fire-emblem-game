@@ -7,6 +7,8 @@ const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
 const _turn_mgr_dep := preload("res://scripts/battle/turn_manager.gd")
 const _pathfind_dep := preload("res://scripts/battle/pathfinding_service.gd")
 const _urs_dep := preload("res://scripts/unit/unit_runtime_state.gd")
+const _query_dep := preload("res://scripts/battle/battle_query_service.gd")
+const _victory_dep := preload("res://scripts/battle/victory_judge.gd")
 
 signal battle_started()
 signal battle_ended(result: String)
@@ -25,6 +27,8 @@ var pending_combat_result: Dictionary = {}
 var pending_skill_id: String = ""
 var _available_skills: Array[String] = []
 var _current_skill_index: int = 0
+var battle_query: Node = null
+var victory_judge = null
 var battle_hud: Node = null
 
 @onready var turn_manager = $TurnManager
@@ -39,6 +43,9 @@ var _battle_started_once := false
 
 func _ready() -> void:
 	combat_manager = _combat_dep.new()
+	battle_query = _query_dep.new()
+	victory_judge = _victory_dep.new()
+	add_child(battle_query)
 	if not InputManager.confirm_pressed.is_connected(_on_confirm):
 		InputManager.confirm_pressed.connect(_on_confirm)
 	if not InputManager.cancel_pressed.is_connected(_on_cancel):
@@ -82,11 +89,20 @@ func start_battle(map_id: String) -> void:
 	_battle_started_once = true
 	_apply_map_data()
 	_spawn_units()
+	if battle_query:
+		battle_query.units_container = units_container
+		battle_query.pathfinding = pathfinding
+		battle_query.tile_map = tile_map
+		battle_query.map_data = map_data
+	if victory_judge:
+		victory_judge.setup(map_data)
 	turn_manager.initialize_battle(GameState.turn_number)
 	if not turn_manager.turn_started.is_connected(_on_turn_started):
 		turn_manager.turn_started.connect(_on_turn_started)
 	if not turn_manager.round_ended.is_connected(_on_round_ended):
 		turn_manager.round_ended.connect(_on_round_ended)
+	if not turn_manager.battle_check_requested.is_connected(_on_battle_check_requested):
+		turn_manager.battle_check_requested.connect(_on_battle_check_requested)
 	cursor.position = Vector2.ZERO
 	_update_tile_info(Vector2i.ZERO)
 	if battle_hud:
@@ -101,6 +117,9 @@ func _on_turn_started(phase: String) -> void:
 		_check_battle_end()
 
 func _on_round_ended() -> void:
+	_check_battle_end()
+
+func _on_battle_check_requested() -> void:
 	_check_battle_end()
 
 func _spawn_units() -> void:
@@ -457,12 +476,13 @@ func _execute_skill_on_self(unit, skill_id: String) -> void:
 		battle_hud.hide_action_menu()
 
 func get_unit_at(pos: Vector2i):
-	for unit in units_container.get_children():
-		if unit.grid_pos == pos and unit.is_alive():
-			return unit
+	if battle_query:
+		return battle_query.get_unit_at(pos)
 	return null
 
 func check_victory_condition() -> String:
+	if not victory_judge:
+		return ""
 	var player_alive := false
 	var enemy_alive := false
 	for unit in units_container.get_children():
@@ -470,40 +490,7 @@ func check_victory_condition() -> String:
 			match unit.team:
 				"player": player_alive = true
 				"enemy": enemy_alive = true
-	if not _is_defeat_condition_met(player_alive):
-		var victory_condition: String = str(map_data.get("victory_condition", "rout"))
-		match victory_condition:
-			"rout":
-				if not enemy_alive:
-					return "victory"
-			"defend", "survive":
-				if _is_turn_limit_reached() and player_alive:
-					return "victory"
-			_:
-				if not enemy_alive:
-					return "victory"
-	if _is_defeat_condition_met(player_alive):
-		return "defeat"
-	return ""
-
-func _is_defeat_condition_met(player_alive: bool) -> bool:
-	var defeat_condition: String = str(map_data.get("defeat_condition", "all_dead"))
-	var victory_condition: String = str(map_data.get("victory_condition", "rout"))
-	if not player_alive:
-		return true
-	if _is_turn_limit_reached() and victory_condition not in ["defend", "survive"]:
-		return true
-	match defeat_condition:
-		"all_dead", "lord_dead":
-			return not player_alive
-		"turn_limit":
-			return _is_turn_limit_reached()
-		_:
-			return false
-
-func _is_turn_limit_reached() -> bool:
-	var max_turns: int = int(map_data.get("max_turns", 0))
-	return max_turns > 0 and turn_manager.turn_number > max_turns
+	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number)
 
 func has_battle_ended() -> bool:
 	return check_victory_condition() != ""
@@ -551,59 +538,33 @@ func move_unit_to(unit: Node, target_pos: Vector2i) -> void:
 		unit.runtime_state.action_state = _urs_dep.ActionState.MOVED
 
 func get_enemy_units_for(unit: Node) -> Array:
-	var result: Array = []
-	if not unit:
-		return result
-	for other in units_container.get_children():
-		if other == unit:
-			continue
-		if other.team == unit.team:
-			continue
-		if not other.is_alive():
-			continue
-		result.append(other)
-	return result
+	if battle_query:
+		return battle_query.get_enemy_units_for(unit)
+	return []
 
 func get_walkable_tiles_for(unit: Node) -> Array[Vector2i]:
-	var reachable: Array = pathfinding.get_reachable_tiles(unit.grid_pos, unit.runtime_state.mov_stat, tile_map)
-	var result: Array[Vector2i] = []
-	for tile in reachable:
-		if not is_tile_walkable(tile):
-			continue
-		var occupied = get_unit_at(tile)
-		if occupied and occupied != unit:
-			continue
-		result.append(tile)
-	return result
+	if battle_query:
+		return battle_query.get_walkable_tiles_for(unit)
+	return []
 
 func get_terrain_id_at(pos: Vector2i) -> String:
-	var terrain_ids: Array = map_data.get("terrain_ids", [])
-	if pos.y < 0 or pos.y >= terrain_ids.size():
-		return "plain"
-	var row: Array = terrain_ids[pos.y]
-	if pos.x < 0 or pos.x >= row.size():
-		return "plain"
-	return str(row[pos.x])
+	if battle_query:
+		return battle_query.get_terrain_id_at(pos)
+	return "plain"
 
 func get_terrain_data_at(pos: Vector2i) -> Dictionary:
-	var terrain_defs: Dictionary = map_data.get("terrain_defs", {})
-	var terrain_id := get_terrain_id_at(pos)
-	return terrain_defs.get(terrain_id, {
-		"move_cost": 1,
-		"avoid_bonus": 0,
-		"defense_bonus": 0,
-		"walkable": true,
-		"height": 0,
-	})
+	if battle_query:
+		return battle_query.get_terrain_data_at(pos)
+	return {}
 
 func is_tile_walkable(pos: Vector2i) -> bool:
-	if pos.x < 0 or pos.y < 0:
-		return false
-	if pos.x >= map_data.get("width", 0) or pos.y >= map_data.get("height", 0):
-		return false
-	return bool(get_terrain_data_at(pos).get("walkable", true))
+	if battle_query:
+		return battle_query.is_tile_walkable(pos)
+	return true
 
 func get_distance(a: Vector2i, b: Vector2i) -> int:
+	if battle_query:
+		return battle_query.get_distance(a, b)
 	return abs(a.x - b.x) + abs(a.y - b.y)
 
 func _apply_map_data() -> void:

@@ -74,6 +74,15 @@ func clear_battle_snapshot() -> void:
 	battle_units.clear()
 	battle_map_state.clear()
 
+func clear_session_state() -> void:
+	clear_battle_snapshot()
+	latest_battle_result = ""
+	latest_battle_map_id = ""
+	latest_battle_turns = 0
+	resume_scene = "main_menu"
+	current_map_id = ""
+	current_chapter = ""
+
 func _sync_input_mode(phase: GamePhase) -> void:
 	match phase:
 		GamePhase.TITLE, GamePhase.SETTINGS, GamePhase.SAVE_LOAD:

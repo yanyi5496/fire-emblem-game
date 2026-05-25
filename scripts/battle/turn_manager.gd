@@ -8,6 +8,7 @@ const _ses_dep := preload("res://scripts/unit/status_effect_service.gd")
 signal turn_started(phase: String)
 signal turn_ended(phase: String)
 signal round_ended()
+signal battle_check_requested()
 
 enum Phase { PLAYER, ENEMY, NPC, ROUND_END }
 
@@ -45,10 +46,16 @@ func _execute_enemy_turn() -> void:
 		if unit.team == "enemy" and unit.is_alive():
 			enemy_units.append(unit)
 	ai_controller.execute_turn(enemy_units)
-	if bc.has_method("has_battle_ended") and bc.has_battle_ended():
-		bc.end_battle(bc.get_battle_result())
+	battle_check_requested.emit()
+	if has_battle_ended():
 		return
 	start_turn("player")
+
+func has_battle_ended() -> bool:
+	var bc := _get_battle_controller()
+	if not bc or not bc.has_method("has_battle_ended"):
+		return false
+	return bc.has_battle_ended()
 
 func end_turn() -> void:
 	var phase_name := _phase_to_string(current_phase)
@@ -73,9 +80,8 @@ func _execute_round_end() -> void:
 	GameState.set_turn(turn_number)
 	SaveManager.save_game(1)
 	round_ended.emit()
-	var bc := _get_battle_controller()
-	if bc and bc.has_method("has_battle_ended") and bc.has_battle_ended():
-		bc.end_battle(bc.get_battle_result())
+	battle_check_requested.emit()
+	if has_battle_ended():
 		return
 	start_turn("player")
 
