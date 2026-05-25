@@ -5,6 +5,7 @@ var _weapons: Dictionary = {}
 var _jobs: Dictionary = {}
 var _skills: Dictionary = {}
 var _maps: Dictionary = {}
+var _characters: Dictionary = {}
 
 var _schema_validators: Dictionary = {}
 
@@ -34,6 +35,10 @@ func _register_schemas() -> void:
 		"required_fields": ["id", "name", "tiles", "terrain_defs", "units"],
 		"known_fields": ["id", "name", "width", "height", "tiles", "terrain_ids", "terrain_defs", "units", "victory_condition", "defeat_condition", "max_turns", "lord_unit_id", "capture_points", "escape_points", "escape_type"],
 	}
+	_schema_validators["characters"] = {
+		"required_fields": ["id", "name", "unit_id"],
+		"known_fields": ["id", "name", "unit_id", "is_recruited", "story_flags"],
+	}
 
 func load_all() -> void:
 	_load_directory("units", _units)
@@ -41,6 +46,7 @@ func load_all() -> void:
 	_load_directory("jobs", _jobs)
 	_load_directory("skills", _skills)
 	_load_directory("maps", _maps)
+	_load_directory("characters", _characters)
 
 func _load_directory(dir_name: String, target: Dictionary) -> void:
 	var path := "res://data/%s/" % dir_name
@@ -120,6 +126,7 @@ func _get_data_map(dir_name: String) -> Dictionary:
 		"jobs": return _jobs
 		"skills": return _skills
 		"maps": return _maps
+		"characters": return _characters
 	return {}
 
 func reload() -> void:
@@ -159,3 +166,6 @@ func get_all_skills() -> Dictionary:
 
 func get_all_maps() -> Dictionary:
 	return _maps.duplicate()
+
+func get_character(id: String) -> Dictionary:
+	return _characters.get(id, {})
