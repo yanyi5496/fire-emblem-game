@@ -158,6 +158,12 @@ func execute_skill(unit, target, skill_id: String) -> Dictionary:
 			return _execute_damage(unit, target, skill_id, effect)
 		"stat_bonus":
 			return _execute_stat_bonus(unit, target if target else unit, skill_id, skill_data, effect)
+		"aura":
+			push_warning("Aura skill not yet implemented: %s" % skill_id)
+			return {"success": false, "message": ""}
+		"counter":
+			push_warning("Counter skill not yet implemented: %s" % skill_id)
+			return {"success": false, "message": ""}
 		_:
 			return {"success": false, "message": ""}
 

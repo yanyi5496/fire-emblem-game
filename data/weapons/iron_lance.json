@@ -1,0 +1,13 @@
+{
+  "id": "iron_lance",
+  "name": "铁枪",
+  "type": "lance",
+  "might": 7,
+  "hit": 80,
+  "crit": 0,
+  "weight": 7,
+  "min_range": 1,
+  "max_range": 1,
+  "durability": 35,
+  "effective_tags": []
+}

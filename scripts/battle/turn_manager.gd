@@ -35,6 +35,7 @@ func start_turn(phase_name: String) -> void:
 			current_phase = Phase.NPC
 			GameState.set_phase(GameState.GamePhase.BATTLE_NPC)
 	turn_started.emit(phase_name)
+	_process_passive_triggers("turn_start")
 	if phase_name == "enemy":
 		_execute_enemy_turn()
 
@@ -71,6 +72,7 @@ func end_turn() -> void:
 
 func _execute_round_end() -> void:
 	current_phase = Phase.ROUND_END
+	_process_passive_triggers("turn_end")
 	_process_poison_damage()
 	_process_debuff_ticks()
 	_process_buff_ticks()
@@ -132,6 +134,17 @@ func _process_skill_cooldowns() -> void:
 		for skill_id in cooldowns.keys():
 			cooldowns[skill_id] = max(0, int(cooldowns[skill_id]) - 1)
 		unit.runtime_state.skill_cooldowns = cooldowns
+
+func _process_passive_triggers(trigger_type: String) -> void:
+	var bc := _get_battle_controller()
+	if not bc or not bc.has_method("skill_service"):
+		return
+	var ss = bc.skill_service
+	if not ss or not ss.has_method("apply_unit_passives"):
+		return
+	for unit in get_tree().get_nodes_in_group("units"):
+		if unit.is_alive() and unit.runtime_state:
+			ss.apply_unit_passives(unit, trigger_type)
 
 func _has_turn_end_heal(unit) -> bool:
 	if not unit.runtime_state:

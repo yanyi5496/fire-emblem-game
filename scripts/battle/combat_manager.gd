@@ -169,6 +169,7 @@ func _apply_result(result: Dictionary, skill_service = null) -> void:
 			defender.take_damage(result.get("damage", 0))
 		result["applied_effects"].append("attacker_hit")
 		if skill_service:
+			skill_service.apply_unit_passives(attacker, "on_hit")
 			skill_service.apply_unit_passives(defender, "on_damage")
 	if not defender.is_alive():
 		result["applied_effects"].append("defender_killed")

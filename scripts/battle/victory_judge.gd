@@ -9,7 +9,7 @@ func setup(map_data: Dictionary) -> void:
 	self.map_data = map_data
 	lord_unit_id = str(map_data.get("lord_unit_id", ""))
 
-func check_victory(enemy_alive: bool, player_alive: bool, turn_number: int, lord_alive: bool = true) -> String:
+func check_victory(enemy_alive: bool, player_alive: bool, turn_number: int, lord_alive: bool = true, lord_on_escape: bool = false, all_on_escape: bool = false, capture_points: Dictionary = {}) -> String:
 	if not _is_defeat_condition_met(player_alive, turn_number, lord_alive):
 		var victory_condition: String = str(map_data.get("victory_condition", "rout"))
 		match victory_condition:
@@ -19,12 +19,28 @@ func check_victory(enemy_alive: bool, player_alive: bool, turn_number: int, lord
 			"defend", "survive":
 				if _is_turn_limit_reached(turn_number) and player_alive:
 					return "victory"
+			"escape":
+				return _check_escape_victory(lord_alive, lord_on_escape, all_on_escape)
 			_:
 				if not enemy_alive:
 					return "victory"
 	if _is_defeat_condition_met(player_alive, turn_number, lord_alive):
 		return "defeat"
 	return ""
+
+func _check_escape_victory(lord_alive: bool, lord_on_escape: bool, all_on_escape: bool) -> String:
+	var escape_type: String = str(map_data.get("escape_type", "escape_lord"))
+	match escape_type:
+		"escape_lord":
+			if lord_unit_id != "" and lord_on_escape:
+				return "victory"
+			return ""
+		"escape_all":
+			if all_on_escape and lord_alive:
+				return "victory"
+			return ""
+		_:
+			return ""
 
 func has_battle_ended(enemy_alive: bool, player_alive: bool, turn_number: int) -> bool:
 	return check_victory(enemy_alive, player_alive, turn_number) != ""

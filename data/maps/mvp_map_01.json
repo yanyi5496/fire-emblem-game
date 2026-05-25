@@ -30,7 +30,12 @@
   "terrain_defs": {
     "plain": {"move_cost": 1, "avoid_bonus": 0, "defense_bonus": 0, "walkable": true, "height": 0},
     "forest": {"move_cost": 2, "avoid_bonus": 20, "defense_bonus": 1, "walkable": true, "height": 1},
-    "mountain": {"move_cost": 3, "avoid_bonus": 10, "defense_bonus": 2, "walkable": true, "height": 2}
+    "mountain": {"move_cost": 3, "avoid_bonus": 10, "defense_bonus": 2, "walkable": true, "height": 2},
+    "river": {"move_cost": 0, "avoid_bonus": 0, "defense_bonus": 0, "walkable": false, "height": -1},
+    "castle": {"move_cost": 1, "avoid_bonus": 5, "defense_bonus": 3, "walkable": true, "height": 1},
+    "indoor": {"move_cost": 1, "avoid_bonus": 0, "defense_bonus": 0, "walkable": true, "height": 0},
+    "volcano": {"move_cost": 2, "avoid_bonus": -10, "defense_bonus": 0, "walkable": true, "height": 1},
+    "snow": {"move_cost": 2, "avoid_bonus": 5, "defense_bonus": 0, "walkable": true, "height": 0}
   },
   "units": [
     {"unit_id": "hero_001", "x": 1, "y": 1, "team": "player"},

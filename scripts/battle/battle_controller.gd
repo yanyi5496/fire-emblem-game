@@ -74,6 +74,8 @@ func _ready() -> void:
 				action_menu_node.skill_selected.connect(_on_action_skill)
 			if not action_menu_node.wait_selected.is_connected(_on_action_wait):
 				action_menu_node.wait_selected.connect(_on_action_wait)
+			if not action_menu_node.switch_weapon_selected.is_connected(_on_action_switch_weapon):
+				action_menu_node.switch_weapon_selected.connect(_on_action_switch_weapon)
 		var preview_node = battle_hud.get_node("AttackPreview") if battle_hud.has_node("AttackPreview") else null
 		if preview_node:
 			if not preview_node.attack_confirmed.is_connected(_on_attack_confirmed):
@@ -318,6 +320,21 @@ func _on_action_wait() -> void:
 	selected_unit.wait()
 	_execute_action_complete()
 
+func _on_action_switch_weapon() -> void:
+	if not selected_unit or not selected_unit.runtime_state:
+		return
+	var inv: Array[String] = selected_unit.runtime_state.inventory
+	if inv.size() <= 1:
+		return
+	var current: String = selected_unit.runtime_state.equipped_weapon
+	var idx: int = inv.find(current)
+	var next_idx: int = (idx + 1) % inv.size()
+	selected_unit.runtime_state.equipped_weapon = inv[next_idx]
+	selected_unit.runtime_state.get_weapon_durability(inv[next_idx])
+	if battle_hud and battle_hud.has_method("show_message"):
+		battle_hud.show_message("装备: %s" % DataManager.get_weapon(inv[next_idx]).get("name", inv[next_idx]))
+	_execute_action_complete()
+
 func _on_attack_confirmed() -> void:
 	if not selected_unit or not pending_target:
 		return
@@ -430,14 +447,29 @@ func check_victory_condition() -> String:
 	var enemy_alive := false
 	var lord_id: String = str(map_data.get("lord_unit_id", ""))
 	var lord_alive := lord_id == ""
+	var escape_points: Array = map_data.get("escape_points", [])
+	var lord_on_escape := false
+	var all_on_escape := false
+	var escape_count := 0
 	for unit in units_container.get_children():
 		if lord_id != "" and unit.runtime_state and unit.runtime_state.template_id == lord_id:
 			lord_alive = unit.is_alive()
 		if unit.is_alive():
 			match unit.team:
-				"player": player_alive = true
+				"player":
+					player_alive = true
+					if not escape_points.is_empty() and unit.grid_pos in escape_points:
+						escape_count += 1
+						if lord_id != "" and unit.runtime_state and unit.runtime_state.template_id == lord_id:
+							lord_on_escape = true
 				"enemy": enemy_alive = true
-	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number, lord_alive)
+	if not escape_points.is_empty() and escape_count > 0:
+		var player_unit_count := 0
+		for unit in units_container.get_children():
+			if unit.is_alive() and unit.team == "player":
+				player_unit_count += 1
+		all_on_escape = escape_count >= player_unit_count
+	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number, lord_alive, lord_on_escape, all_on_escape)
 
 func has_battle_ended() -> bool:
 	return check_victory_condition() != ""
