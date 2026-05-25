@@ -27,6 +27,7 @@ var exp: int = 0
 
 var action_state: ActionState = ActionState.IDLE
 var status_effects: Array[Dictionary] = []
+var ai_type: String = "aggressive"
 var equipped_weapon: String = ""
 var inventory: Array[String] = []
 var skills: Array[String] = []

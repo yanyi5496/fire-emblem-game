@@ -154,6 +154,8 @@ func _spawn_unit(data: Dictionary) -> void:
 	)
 	if data.has("current_hp"):
 		unit.apply_saved_state(data)
+	if unit.runtime_state:
+		unit.runtime_state.ai_type = str(data.get("ai_type", "aggressive"))
 	units_container.add_child(unit)
 
 func _on_move_cursor(direction: Vector2) -> void:
