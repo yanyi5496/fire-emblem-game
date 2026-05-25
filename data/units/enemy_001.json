@@ -26,5 +26,6 @@
     "luk": 25
   },
   "inventory": ["iron_axe"],
-  "skills": []
+  "skills": [],
+  "tags": []
 }

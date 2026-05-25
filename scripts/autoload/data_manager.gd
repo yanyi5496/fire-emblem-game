@@ -17,7 +17,7 @@ func _register_schemas() -> void:
 	_schema_validators["units"] = {
 		"required_fields": ["id", "name", "job", "stats", "inventory"],
 		"stats_fields": ["hp", "str", "mag", "skl", "spd", "def", "res", "luk", "mov"],
-		"known_fields": ["id", "name", "job", "level", "exp", "stats", "growth_rates", "inventory", "skills", "ai_type"],
+		"known_fields": ["id", "name", "job", "level", "exp", "stats", "growth_rates", "inventory", "skills", "ai_type", "tags"],
 	}
 	_schema_validators["weapons"] = {
 		"required_fields": ["id", "type", "might", "hit", "weight", "min_range", "max_range", "durability"],

@@ -106,8 +106,14 @@ func _calc_damage(result: Dictionary, weapon_data: Dictionary) -> void:
 	var is_magic: bool = result.get("is_magic", false)
 	var atk_stat: int = attacker.runtime_state.mag_stat if is_magic else attacker.runtime_state.str_stat
 	var def_stat: int = defender.runtime_state.res_stat if is_magic else defender.runtime_state.def_stat
-	var terrain_bonus: int = _get_terrain_bonus(defender, "defense_bonus")
-	result["damage"] = max(0, atk_stat + might + tri_dmg - (def_stat + terrain_bonus))
+	var terrain_bonus: int = _get_terrain_bonus(defender, "defense_bonus") if not is_magic else 0
+	var base_damage: int = max(0, atk_stat + might + tri_dmg - (def_stat + terrain_bonus))
+	var effective_tags: Array = weapon_data.get("effective_tags", [])
+	for tag in effective_tags:
+		if _unit_has_tag(defender, str(tag)):
+			base_damage = int(base_damage * 1.5)
+			break
+	result["damage"] = base_damage
 
 func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
@@ -132,7 +138,7 @@ func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
 	var atk_stat: int = defender.runtime_state.mag_stat if is_magic else defender.runtime_state.str_stat
 	var def_stat: int = attacker.runtime_state.res_stat if is_magic else attacker.runtime_state.def_stat
 	var counter_triangle := _calc_triangle_damage_bonus(def_weapon.get("type", ""), weapon_data.get("type", ""))
-	var terrain_bonus: int = _get_terrain_bonus(attacker, "defense_bonus")
+	var terrain_bonus: int = _get_terrain_bonus(attacker, "defense_bonus") if not is_magic else 0
 	result["counter_damage"] = max(0, atk_stat + def_might + counter_triangle - (def_stat + terrain_bonus))
 	var counter_hit_bonus := _calc_triangle_hit_bonus(def_weapon.get("type", ""), weapon_data.get("type", ""))
 	result["counter_hit_rate"] = _calc_hit_value(defender, attacker, def_weapon, counter_hit_bonus)
@@ -216,6 +222,12 @@ func _calc_hit_value(attacker: Node, defender: Node, weapon_data: Dictionary, tr
 		height_bonus = -10
 	var raw: int = base_hit + skl * 2 + luk + triangle_hit_bonus + height_bonus - (target_spd / 2 + target_luk + avoid_bonus)
 	return clampi(raw, 0, 100)
+
+func _unit_has_tag(unit: Node, tag: String) -> bool:
+	if not unit or not unit.runtime_state:
+		return false
+	var tags: Array = unit.runtime_state.get("tags", [])
+	return tag in tags
 
 func _get_terrain_bonus(unit: Node, key: String) -> int:
 	var scene := _get_battle_scene(unit)

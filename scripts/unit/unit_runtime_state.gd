@@ -29,6 +29,7 @@ var pending_level_ups: Array[Dictionary] = []
 var action_state: ActionState = ActionState.IDLE
 var status_effects: Array[Dictionary] = []
 var ai_type: String = "aggressive"
+var tags: Array[String] = []
 var equipped_weapon: String = ""
 var inventory: Array[String] = []
 var skills: Array[String] = []
@@ -95,6 +96,7 @@ func setup_from_template(template_id: String) -> void:
 
 	inventory = _to_typed_string_array(data.get("inventory", []))
 	skills = _to_typed_string_array(data.get("skills", []))
+	tags = _to_typed_string_array(data.get("tags", []))
 	skill_cooldowns.clear()
 	for skill_id in skills:
 		var skill_data: Dictionary = DataManager.get_skill(skill_id)

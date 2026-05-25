@@ -28,5 +28,6 @@
     "luk": 40
   },
   "inventory": ["iron_sword"],
-  "skills": ["sword_adept", "flame_burst", "power_strike"]
+  "skills": ["sword_adept", "flame_burst", "power_strike"],
+  "tags": []
 }

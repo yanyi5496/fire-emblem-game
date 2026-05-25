@@ -9,5 +9,6 @@
   "min_range": 1,
   "max_range": 1,
   "durability": 35,
-  "effective_tags": []
+  "effective_tags": [],
+  "is_magic": false
 }

@@ -28,5 +28,6 @@
     "luk": 45
   },
   "inventory": ["heal_staff"],
-  "skills": ["heal_light"]
+  "skills": ["heal_light"],
+  "tags": []
 }

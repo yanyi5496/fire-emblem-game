@@ -9,5 +9,6 @@
   "min_range": 2,
   "max_range": 2,
   "durability": 30,
-  "effective_tags": ["flying"]
+  "effective_tags": ["flying"],
+  "is_magic": false
 }
