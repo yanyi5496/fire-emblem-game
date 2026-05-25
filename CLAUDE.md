@@ -26,7 +26,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 构建与运行
 
 - 使用 Godot Editor 4.6 打开项目目录运行
-- 无命令行构建/测试工具链，所有开发通过 Godot Editor 进行
+- CLI 测试：`& "D:\Godot_v4.6.3\Godot_v4.6.3-stable_win64_console.exe" --headless --path D:/godot/fegame --scene res://test/test_runner.tscn --quit`
+- Godot 4.6 类型推断严格：`var x := func()` 若 func 返回 Variant 会编译错误，必须显式注解 `var x: Type = func()`
 
 ## 当前玩法边界
 
@@ -45,14 +46,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 BattleScene
- ├── TileMap          — 格子地图，含地形属性（move_cost, avoid_bonus, defense_bonus, walkable, height）
- ├── Units            — 战斗单位
- ├── Cursor           — 玩家光标
- ├── Camera2D         — 摄像机
- ├── UI               — 战斗界面
- ├── TurnManager      — 回合管理
- ├── CombatManager    — 战斗计算
- └── AudioManager     — 音频管理
+ ├── TileMap              — 格子地图，含地形属性
+ ├── Units                — 战斗单位
+ ├── Cursor               — 玩家光标
+ ├── Camera2D             — 摄像机
+ ├── UI                   — 战斗界面
+ ├── TurnManager          — 回合管理 (emit battle_check_requested)
+ ├── CombatManager        — 战斗计算
+ ├── BattleQueryService   — 单位/地形查询 (依赖注入, 被 AI/寻路使用)
+ ├── VictoryJudge         — 胜负判定 (依赖注入)
+ ├── PathfindingService   — 寻路 (使用 BattleQueryService)
+ ├── AIController         — AI (使用 BattleQueryService)
+ └── AudioManager         — 音频管理
 ```
 
 ### 单位结构
@@ -68,10 +73,12 @@ Unit
 
 ### 核心系统间关系
 
-- **回合系统**驱动 Player/Enemy/NPC 轮流行动
+- **回合系统**驱动 Player/Enemy/NPC 轮流行动，`TurnManager` 通过 `battle_check_requested` 信号通知 `BattleController` 检查胜负，不直接调用 BC
 - **战斗公式**：Damage = Attack - Defense；Hit = WeaponHit + Skill×2 + Luck；Crit = Skill/2 + WeaponCrit
 - **武器克制**：剑>斧>枪>剑，克制方命中+15、伤害+1
-- **AI 优先级**：击杀 > 攻残血 > 攻治疗 > 占点 > 靠近玩家
+- **AI 优先级**：击杀 > 治疗 > 残血 > 移动攻击，AI 通过 `BattleQueryService` 查询战场数据，不直接依赖 `BattleController`
+- **寻路系统**通过 `BattleQueryService` 获取地形和单位位置，不通过 scene tree 反查
+- **胜负判定**：`VictoryJudge` 独立计算，支持 rout/defend/survive + all_dead/lord_dead/turn_limit
 - **成长系统**：升级时按成长率随机提升属性
 
 ## 运行时架构约束
@@ -194,6 +201,73 @@ Unit
 
 - 进入战斗场景后还需要外部手动补调 `start_battle()` 才能动
 - 路由层只切场景，不补业务上下文，导致战斗场景空转
+
+### 9. BattleQueryService 是战场唯一查询入口
+
+`BattleQueryService` 是 terrain/unit 查询的唯一入口，`BattleController` 保留同名方法来向后兼容，但新代码应当直接使用 `battle_controller.battle_query`。
+
+依赖关系：
+- `PathfindingService` → 使用 `battle_query`，不再通过 scene tree 反查
+- `AIController` → 使用 `battle_controller.battle_query` 获取敌人/距离/地形
+- `CombatManager` → 通过 scene tree 查询（RefCounted，暂不依赖服务）
+
+强制要求：
+- 新增的查询方法必须写在 `BattleQueryService` 中，而非 `BattleController`
+- `BattleQueryService` 的方法不修改游戏状态（只读）
+- 外部对战场状态的写入仍然通过 `BattleController`（如 `move_unit_to`）
+
+禁止：
+- 在 `PathfindingService`、`AIController` 中通过 scene tree 反查 `BattleController` 获取查询数据
+- 新增脚本直接访问 `BattleController.units_container` 或 `BattleController.map_data`
+
+### 10. VictoryJudge 是胜负判定的唯一权威
+
+胜负判定逻辑在 `VictoryJudge` 中实现，`BattleController` 保留同名方法做委托。
+
+强制要求：
+- 新增胜负条件必须在 `VictoryJudge` 中扩展，不在 `BattleController` 中加
+- `VictoryJudge` 是 `RefCounted`，通过 `setup(map_data)` 注入地图数据
+- `TurnManager` 不直接调用 `BattleController.end_battle()`，而是通过 `battle_check_requested` 信号触发检查
+- `BattleController._check_battle_end()` 监听该信号并执行实际结算
+
+### 11. TurnManager 使用信号通信，不直接调用 BattleController
+
+`TurnManager` 在敌方行动结束和回合结算结束后，通过 `battle_check_requested` 信号通知 `BattleController` 检查战斗是否结束，而非直接调用 `BattleController.end_battle()`。
+
+强制要求：
+- `TurnManager` 不 import 或 preload `BattleController`
+- `TurnManager` 不调用 `BattleController` 的任何方法
+- 新增回合阶段结束时如有胜负检查需求，必须通过新增信号而非直接调用
+
+### 12. GameState 区分运行时状态与持久化状态
+
+`GameState` 承载两类不同生命周期的数据：
+
+**持久化状态**（存档/读档涉及）：
+- `gold`, `inventory`, `story_flags`, `completed_maps`
+- `current_chapter`, `current_map_id`, `turn_number`
+
+**运行时会话状态**（读档重建或重置）：
+- `battle_units`, `battle_map_state` — 战斗快照
+- `latest_battle_*` — 最近一次战斗结果
+- `resume_scene` — 恢复路由
+
+强制要求：
+- `clear_session_state()` 清除运行时状态但保留持久化状态
+- `reset()` 清除全部状态
+- 新加字段时必须明确属于哪一类，写入对应区域
+
+### 13. BattleController 不超 500 行
+
+`BattleController` 承担玩家输入路由、状态机、单位操作等职责，但不应无限制膨胀。
+
+职责边界：
+- **属于 BC**：`_ready`, `start_battle`, 状态机 (`_on_confirm/_on_cancel/_on_action_*`), 单位移动, 攻击/技能操作, 战斗结束
+- **不属于 BC**：胜负判定 → `VictoryJudge`；战场查询 → `BattleQueryService`；回合推进 → `TurnManager`；输入路由 → `InputManager`
+
+强制要求：
+- 新增功能若导致 BC 超过 550 行，必须先提取新服务
+- 新服务优先使用 `RefCounted`（轻量），需要场景生命周期的再用 `Node`
 
 ## 编码约束
 
