@@ -16,18 +16,23 @@ func _register_schemas() -> void:
 	_schema_validators["units"] = {
 		"required_fields": ["id", "name", "job", "stats", "inventory"],
 		"stats_fields": ["hp", "str", "mag", "skl", "spd", "def", "res", "luk", "mov"],
+		"known_fields": ["id", "name", "job", "level", "exp", "stats", "growth_rates", "inventory", "skills", "ai_type"],
 	}
 	_schema_validators["weapons"] = {
 		"required_fields": ["id", "type", "might", "hit", "weight", "min_range", "max_range", "durability"],
+		"known_fields": ["id", "name", "type", "might", "hit", "crit", "weight", "min_range", "max_range", "durability", "effective_tags", "is_magic"],
 	}
 	_schema_validators["jobs"] = {
 		"required_fields": ["id", "name", "weapons", "mov"],
+		"known_fields": ["id", "name", "tier", "promotes_to", "weapons", "mov", "growth_bonus", "terrain_adaptation", "skills"],
 	}
 	_schema_validators["skills"] = {
 		"required_fields": ["id", "type", "trigger", "effect"],
+		"known_fields": ["id", "name", "type", "trigger", "cost", "effect", "range", "cooldown", "description", "priority"],
 	}
 	_schema_validators["maps"] = {
 		"required_fields": ["id", "name", "tiles", "terrain_defs", "units"],
+		"known_fields": ["id", "name", "width", "height", "tiles", "terrain_ids", "terrain_defs", "units", "victory_condition", "defeat_condition", "max_turns", "lord_unit_id", "capture_points", "escape_points", "escape_type"],
 	}
 
 func load_all() -> void:
@@ -77,7 +82,36 @@ func validate_all() -> Dictionary:
 				for sfield in validator["stats_fields"]:
 					if not item["stats"].has(sfield):
 						errors.append("%s/%s.stats missing field: %s" % [dir_name, item_id, sfield])
+			var known: Array = validator.get("known_fields", [])
+			for key in item.keys():
+				if key not in known:
+					errors.append("%s/%s unknown field: %s" % [dir_name, item_id, key])
+	_validate_references(errors)
 	return { "valid": errors.is_empty(), "errors": errors }
+
+func _validate_references(errors: Array[String]) -> void:
+	for uid in _units:
+		var u: Dictionary = _units[uid]
+		var job_id: String = u.get("job", "")
+		if job_id != "" and not _jobs.has(job_id):
+			errors.append("units/%s references unknown job: %s" % [uid, job_id])
+		for wid in u.get("inventory", []):
+			if wid != "" and not _weapons.has(wid):
+				errors.append("units/%s references unknown weapon: %s" % [uid, wid])
+		for sid in u.get("skills", []):
+			if sid != "" and not _skills.has(sid):
+				errors.append("units/%s references unknown skill: %s" % [uid, sid])
+	for jid in _jobs:
+		var j: Dictionary = _jobs[jid]
+		for wid in j.get("weapons", []):
+			if wid != "" and not _weapons.has(wid):
+				errors.append("jobs/%s references unknown weapon: %s" % [jid, wid])
+	for mid in _maps:
+		var m: Dictionary = _maps[mid]
+		for entry in m.get("units", []):
+			var unit_id: String = str(entry.get("unit_id", ""))
+			if unit_id != "" and not _units.has(unit_id):
+				errors.append("maps/%s references unknown unit: %s" % [mid, unit_id])
 
 func _get_data_map(dir_name: String) -> Dictionary:
 	match dir_name:

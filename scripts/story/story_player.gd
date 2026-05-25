@@ -79,10 +79,24 @@ func _advance() -> void:
 			_advance()
 		_story_parser_dep.LineType.EVENT:
 			_handle_event(line.get("event_id", ""))
+		_story_parser_dep.LineType.CONDITION:
+			var flag: String = line.get("flag", "")
+			if not GameState.story_flags.get(flag, false):
+				_skip_to_next_marker()
+			else:
+				_advance()
 		_story_parser_dep.LineType.CHOICE:
 			_show_choices()
 		_:
 			_advance()
+
+func _skip_to_next_marker() -> void:
+	while _current_index < _lines.size():
+		var line := _lines[_current_index]
+		if line.get("type", _story_parser_dep.LineType.UNKNOWN) != _story_parser_dep.LineType.DIALOGUE:
+			break
+		_current_index += 1
+	_advance()
 
 func _show_narrator() -> void:
 	_is_narrator_mode = true

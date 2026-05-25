@@ -426,12 +426,16 @@ func check_victory_condition() -> String:
 		return ""
 	var player_alive := false
 	var enemy_alive := false
+	var lord_id: String = str(map_data.get("lord_unit_id", ""))
+	var lord_alive := lord_id == ""
 	for unit in units_container.get_children():
+		if lord_id != "" and unit.runtime_state and unit.runtime_state.template_id == lord_id:
+			lord_alive = unit.is_alive()
 		if unit.is_alive():
 			match unit.team:
 				"player": player_alive = true
 				"enemy": enemy_alive = true
-	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number)
+	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number, lord_alive)
 
 func has_battle_ended() -> bool:
 	return check_victory_condition() != ""

@@ -37,18 +37,25 @@ func has_any_save() -> bool:
 func save_game(slot: int, runtime_snapshot: Dictionary = {}) -> bool:
 	var data := _build_save_data(runtime_snapshot)
 	var path := _get_save_path(slot)
-	var file := FileAccess.open(path, FileAccess.WRITE)
+	var tmp_path := path + "_tmp"
+	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if not file:
 		save_failed.emit(slot, "Cannot open file for writing")
 		return false
 	var json_str := JSON.new().stringify(data, "\t")
 	file.store_string(json_str)
+	file = null
+	var dir := DirAccess.open("user://")
+	var file_name := "save_%02d.save" % slot
+	if dir:
+		dir.remove(file_name)
+		dir.rename(file_name + "_tmp", file_name)
 	save_completed.emit(slot)
 	return true
 
 func load_game(slot: int) -> Dictionary:
 	var path := _get_save_path(slot)
-	if not FileAccess.file_exists(path):
+	if not FileAccess.file_exists(path) or path.ends_with("_tmp"):
 		return {}
 	var file := FileAccess.open(path, FileAccess.READ)
 	if not file:
