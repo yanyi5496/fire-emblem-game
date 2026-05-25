@@ -7,6 +7,10 @@ const _story_parser_dep := preload("res://scripts/story/story_parser.gd")
 const DEFAULT_BATTLE_MAP_ID := "mvp_map_01"
 const DEFAULT_STORY_PATH := "res://data/stories/mvp_story_01.txt"
 
+const STORY_BY_FLAG := {
+	"chapter_01_post_battle": "res://data/stories/mvp_story_02.txt",
+}
+
 signal story_finished()
 signal choice_made(choice_index: int)
 
@@ -30,10 +34,21 @@ func _ready() -> void:
 	if not dialogue_box.gui_input.is_connected(_on_dialogue_box_gui_input):
 		dialogue_box.gui_input.connect(_on_dialogue_box_gui_input)
 	if _lines.is_empty():
+		var flag_key := "%s_post_battle_pending" % GameState.current_chapter
+		if GameState.current_chapter != "" and GameState.story_flags.get(flag_key, false):
+			GameState.story_flags.erase(flag_key)
+			var story_key := flag_key.replace("_pending", "")
+			var pending_story_path := str(STORY_BY_FLAG.get(story_key, ""))
+			if pending_story_path == "":
+				push_warning("Pending post-battle story not configured: %s" % story_key)
+				pending_story_path = DEFAULT_STORY_PATH
+			call_deferred("play_story", pending_story_path)
+			return
 		call_deferred("play_story", DEFAULT_STORY_PATH)
 
 func play_story(file_path: String) -> void:
 	GameState.set_phase(GameState.GamePhase.STORY)
+	GameState.set_resume_scene("story")
 	_lines = _story_parser_dep.parse_story(file_path)
 	_current_index = 0
 	_current_character = ""
@@ -139,6 +154,7 @@ func _handle_event(event_id: String) -> void:
 			SceneRouter.goto("battle")
 		"chapter_clear":
 			_finish()
+			SceneRouter.goto("main_menu")
 		"game_over":
 			_finish()
 		_:

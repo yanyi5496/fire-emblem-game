@@ -8,8 +8,15 @@ const TEST_CLASSES := [
 	preload("res://test/test_scripts_load.gd"),
 	preload("res://test/test_resources_load.gd"),
 	preload("res://test/test_combat_formula.gd"),
+	preload("res://test/test_pathfinding_service.gd"),
 	preload("res://test/test_scenes_load.gd"),
 	preload("res://test/test_scene_contracts.gd"),
+	preload("res://test/test_turn_resolution.gd"),
+	preload("res://test/test_status_effects.gd"),
+	preload("res://test/test_unit_runtime.gd"),
+	preload("res://test/test_story_parser.gd"),
+	preload("res://test/test_save_load_flow.gd"),
+	preload("res://test/test_ai_behavior.gd"),
 ]
 const TEST_NAMES := [
 	"test_data_schema",
@@ -17,13 +24,24 @@ const TEST_NAMES := [
 	"test_scripts_load",
 	"test_resources_load",
 	"test_combat_formula",
+	"test_pathfinding_service",
 	"test_scenes_load",
 	"test_scene_contracts",
+	"test_turn_resolution",
+	"test_status_effects",
+	"test_unit_runtime",
+	"test_story_parser",
+	"test_save_load_flow",
+	"test_ai_behavior",
 ]
 
 var _results: Array[Dictionary] = []
 var _passed: int = 0
 var _failed: int = 0
+
+func _ready() -> void:
+	run_all()
+	get_tree().quit()
 
 func run_all() -> void:
 	print("========================================")

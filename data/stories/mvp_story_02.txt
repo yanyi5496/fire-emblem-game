@@ -1,0 +1,16 @@
+[Narrator]
+山道一战结束，队伍暂时稳住了阵脚。
+
+[Character: 艾克]
+先整队，我们继续前进。
+
+[Character: 琳娜]
+你受伤了，让我看看……
+
+[Character: 艾克]
+不碍事。这片区域的威胁暂时解除了。
+
+[Narrator]
+战斗的硝烟渐渐散去，但前方的路还很长。
+
+[Event: chapter_clear]

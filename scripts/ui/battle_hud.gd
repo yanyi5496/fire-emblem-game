@@ -5,6 +5,7 @@ class_name BattleHUD
 const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
 
 signal end_turn_pressed()
+signal save_pressed()
 
 @onready var turn_label: Label = $TurnLabel
 @onready var unit_info: Panel = $UnitInfoPanel
@@ -31,6 +32,12 @@ func hide_unit_info() -> void:
 func show_action_menu() -> void:
 	action_menu.show()
 
+func show_action_menu_for(unit) -> void:
+	if action_menu and action_menu.has_method("show_for_unit"):
+		action_menu.show_for_unit(unit)
+	else:
+		action_menu.show()
+
 func hide_action_menu() -> void:
 	action_menu.hide()
 
@@ -43,6 +50,9 @@ func show_attack_preview(result: Dictionary) -> void:
 func hide_attack_preview() -> void:
 	attack_preview.hide()
 
+func show_status_message(text: String) -> void:
+	turn_label.text = text
+
 func _phase_to_text(phase: String) -> String:
 	match phase:
 		"player": return "玩家"
@@ -50,3 +60,9 @@ func _phase_to_text(phase: String) -> String:
 		"npc": return "友方"
 		_:
 			return phase
+
+func show_save_feedback(turn: int, phase_text: String) -> void:
+	turn_label.text = "第 %d 回合 · %s回合 · 已保存到槽位 1" % [turn, phase_text]
+
+func _on_save_pressed() -> void:
+	save_pressed.emit()

@@ -28,10 +28,18 @@ func run() -> Dictionary:
 		"res://scripts/ui/tile_info_panel.gd",
 		"res://scripts/story/story_player.gd",
 		"res://scripts/menu/main_menu.gd",
+		"res://scripts/menu/battle_result_menu.gd",
 		"res://scripts/menu/settings_menu.gd",
 		"res://scripts/menu/save_load_menu.gd",
 		"res://scripts/common/utils.gd",
 		"res://test/test_game_state_flow.gd",
+		"res://test/test_pathfinding_service.gd",
+		"res://test/test_turn_resolution.gd",
+		"res://test/test_status_effects.gd",
+		"res://test/test_unit_runtime.gd",
+		"res://test/test_story_parser.gd",
+		"res://test/test_save_load_flow.gd",
+		"res://test/test_ai_behavior.gd",
 	]
 
 	for sp in script_paths:

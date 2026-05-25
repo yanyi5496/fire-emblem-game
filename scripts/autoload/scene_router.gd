@@ -30,7 +30,7 @@ func _get_scene_path(key: String) -> String:
 		"battle":
 			return "res://scenes/battle/battle_scene.tscn"
 		"result":
-			return "res://scenes/menu/main_menu.tscn"
+			return "res://scenes/menu/battle_result_menu.tscn"
 		"story":
 			return "res://scenes/story/story_player.tscn"
 		"boot":

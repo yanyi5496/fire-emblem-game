@@ -27,16 +27,19 @@ func tick_all(units: Array) -> void:
 	for unit in units:
 		if not unit.is_alive():
 			continue
-		var effects: Array[Dictionary] = unit.runtime_state.status_effects
-		var updated: Array[Dictionary] = []
-		for effect in effects:
-			var dur: int = effect.get("duration", 1) - 1
-			if dur > 0:
-				effect["duration"] = dur
-				updated.append(effect)
-			elif effect.get("id") == "poison":
-				_apply_poison(unit)
-		unit.runtime_state.status_effects = updated
+		tick_effect_durations(unit)
+
+func tick_effect_durations(unit) -> void:
+	if not unit.runtime_state:
+		return
+	var effects: Array[Dictionary] = unit.runtime_state.status_effects
+	var updated: Array[Dictionary] = []
+	for effect in effects:
+		var dur: int = effect.get("duration", 1) - 1
+		if dur > 0:
+			effect["duration"] = dur
+			updated.append(effect)
+	unit.runtime_state.status_effects = updated
 
 func has_effect(unit, effect_type: String) -> bool:
 	if not unit.runtime_state:
@@ -49,6 +52,10 @@ func has_effect(unit, effect_type: String) -> bool:
 func _apply_poison(unit) -> void:
 	var dmg: int = max(1, unit.runtime_state.max_hp / 10)
 	unit.take_damage(dmg)
+
+func apply_poison_tick(unit) -> void:
+	if has_effect(unit, "poison"):
+		_apply_poison(unit)
 
 func _is_control_type(type: String) -> bool:
 	return type in ["sleep", "paralysis"]

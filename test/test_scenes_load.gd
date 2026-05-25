@@ -9,6 +9,7 @@ func run() -> Dictionary:
 	var scene_paths := [
 		"res://scenes/boot/boot_scene.tscn",
 		"res://scenes/menu/main_menu.tscn",
+		"res://scenes/menu/battle_result_menu.tscn",
 		"res://scenes/menu/settings_menu.tscn",
 		"res://scenes/menu/save_load_menu.tscn",
 		"res://scenes/battle/battle_scene.tscn",
@@ -71,6 +72,12 @@ func run() -> Dictionary:
 			"MarginContainer/VBoxContainer/ContinueButton",
 			"MarginContainer/VBoxContainer/SettingsButton",
 			"MarginContainer/VBoxContainer/QuitButton",
+		],
+		"res://scenes/menu/battle_result_menu.tscn": [
+			"MarginContainer/VBoxContainer/ResultLabel",
+			"MarginContainer/VBoxContainer/SummaryLabel",
+			"MarginContainer/VBoxContainer/PrimaryButton",
+			"MarginContainer/VBoxContainer/SecondaryButton",
 		],
 		"res://scenes/menu/settings_menu.tscn": [
 			"MarginContainer/VBoxContainer/BackButton",

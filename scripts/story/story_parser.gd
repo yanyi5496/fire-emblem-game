@@ -49,10 +49,14 @@ static func parse_story(file_path: String) -> Array[Dictionary]:
 	if not file:
 		push_error("Story file not found: %s" % file_path)
 		return []
+	var text := file.get_as_text()
+	return parse_story_from_string(text)
+
+static func parse_story_from_string(text: String) -> Array[Dictionary]:
 	var lines: Array[Dictionary] = []
-	while file.get_position() < file.get_length():
-		var line := file.get_line()
-		if line.strip_edges().is_empty():
+	for raw_line in text.split("\n"):
+		var line := raw_line.strip_edges()
+		if line.is_empty():
 			continue
 		var parsed := parse_line(line)
 		if parsed.get("type", LineType.UNKNOWN) != LineType.UNKNOWN:

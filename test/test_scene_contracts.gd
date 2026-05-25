@@ -5,6 +5,7 @@ class_name TestSceneContracts
 const CLASS_TO_SCRIPT := {
 	"BootController": "res://scripts/boot/boot_controller.gd",
 	"MainMenu": "res://scripts/menu/main_menu.gd",
+	"BattleResultMenu": "res://scripts/menu/battle_result_menu.gd",
 	"StoryPlayer": "res://scripts/story/story_player.gd",
 	"BattleController": "res://scripts/battle/battle_controller.gd",
 	"TurnManager": "res://scripts/battle/turn_manager.gd",
@@ -35,6 +36,12 @@ func run() -> Dictionary:
 		details.append("FAIL: StoryPlayer missing expected methods")
 		all_pass = false
 
+	details.append("INFO: Verifying scene contract: BattleResultMenu")
+	var result_check := _check_class("BattleResultMenu", ["_ready", "_on_primary_pressed", "_on_secondary_pressed"])
+	if not result_check:
+		details.append("FAIL: BattleResultMenu missing expected methods")
+		all_pass = false
+
 	details.append("INFO: Verifying scene contract: BattleController")
 	var bc_check := _check_class("BattleController", ["_ready", "start_battle", "check_victory_condition", "end_battle"])
 	if not bc_check:
@@ -48,13 +55,13 @@ func run() -> Dictionary:
 		all_pass = false
 
 	details.append("INFO: Verifying scene contract: BattleHUD")
-	var hud_check := _check_class("BattleHUD", ["update_turn_info", "show_unit_info", "show_action_menu", "hide_action_menu", "show_attack_preview", "hide_attack_preview"])
+	var hud_check := _check_class("BattleHUD", ["update_turn_info", "show_unit_info", "show_action_menu", "hide_action_menu", "show_attack_preview", "hide_attack_preview", "show_status_message"])
 	if not hud_check:
 		details.append("FAIL: BattleHUD missing expected methods")
 		all_pass = false
 
 	details.append("INFO: Verifying scene contract: ActionMenu")
-	var am_check := _check_class("ActionMenu", ["show_for_unit", "_on_move_pressed", "_on_attack_pressed", "_on_wait_pressed"])
+	var am_check := _check_class("ActionMenu", ["show_for_unit", "_on_move_pressed", "_on_attack_pressed", "_on_skill_pressed", "_on_wait_pressed"])
 	if not am_check:
 		details.append("FAIL: ActionMenu missing expected methods")
 		all_pass = false

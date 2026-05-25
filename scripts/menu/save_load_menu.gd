@@ -8,8 +8,9 @@ func _ready() -> void:
 func _on_load_slot_pressed() -> void:
 	if SaveManager.load_game(1).is_empty():
 		return
-	if GameState.current_map_id != "":
-		SceneRouter.goto("battle")
+	var next_scene := GameState.get_resume_scene()
+	if next_scene != "main_menu":
+		SceneRouter.goto(next_scene)
 
 func _on_back_pressed() -> void:
 	SceneRouter.goto("main_menu")

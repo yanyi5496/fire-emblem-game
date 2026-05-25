@@ -11,6 +11,13 @@ script = ExtResource("1")
 [node name="TurnLabel" type="Label" parent="."]
 text = "第 1 回合 · 玩家回合"
 
+[node name="SaveButton" type="Button" parent="."]
+offset_left = 1120.0
+offset_top = 16.0
+offset_right = 1240.0
+offset_bottom = 52.0
+text = "保存"
+
 [node name="UnitInfoPanel" type="Panel" parent="."]
 
 [node name="UnitNameLabel" type="Label" parent="UnitInfoPanel"]
@@ -25,3 +32,5 @@ text = "HP 0/0"
 [node name="AttackPreview" parent="." instance=ExtResource("3")]
 
 [node name="TileInfoPanel" parent="." instance=ExtResource("4")]
+
+[connection signal="pressed" from="SaveButton" to="." method="_on_save_pressed"]

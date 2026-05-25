@@ -30,6 +30,16 @@ var status_effects: Array[Dictionary] = []
 var equipped_weapon: String = ""
 var inventory: Array[String] = []
 var skills: Array[String] = []
+var skill_cooldowns: Dictionary = {}
+
+func can_use_skill(skill_id: String) -> bool:
+	if not skill_cooldowns.has(skill_id):
+		return true
+	return int(skill_cooldowns.get(skill_id, 0)) <= 0
+
+func trigger_skill_cooldown(skill_id: String) -> void:
+	var skill_data: Dictionary = DataManager.get_skill(skill_id)
+	skill_cooldowns[skill_id] = int(skill_data.get("cooldown", 0))
 
 func setup_from_template(template_id: String) -> void:
 	var data: Dictionary = DataManager.get_unit(template_id)
@@ -56,8 +66,13 @@ func setup_from_template(template_id: String) -> void:
 	luk_stat = stats.get("luk", 0)
 	mov_stat = stats.get("mov", 5)
 
-	inventory = data.get("inventory", []).duplicate()
-	skills = data.get("skills", []).duplicate()
+	inventory = _to_typed_string_array(data.get("inventory", []))
+	skills = _to_typed_string_array(data.get("skills", []))
+	skill_cooldowns.clear()
+	for skill_id in skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") == "active":
+			skill_cooldowns[skill_id] = 0
 	if not inventory.is_empty():
 		equipped_weapon = inventory[0]
 
@@ -69,3 +84,38 @@ func get_stats() -> Dictionary:
 		"spd": spd_stat, "def": def_stat, "res": res_stat,
 		"luk": luk_stat, "mov": mov_stat,
 	}
+
+static func _to_typed_string_array(arr) -> Array[String]:
+	var result: Array[String] = []
+	for item in arr:
+		result.append(str(item))
+	return result
+
+func apply_saved_state(data: Dictionary) -> void:
+	current_hp = int(data.get("current_hp", current_hp))
+	current_mp = int(data.get("current_mp", current_mp))
+	level = int(data.get("level", level))
+	exp = int(data.get("exp", exp))
+	inventory = _to_typed_string_array(data.get("inventory", []))
+	skills = _to_typed_string_array(data.get("skills", []))
+	var raw_effects: Array = data.get("status_effects", []) as Array
+	var typed_effects: Array[Dictionary] = []
+	for e in raw_effects:
+		typed_effects.append(e as Dictionary)
+	status_effects = typed_effects
+	skill_cooldowns = data.get("skill_cooldowns", skill_cooldowns).duplicate(true)
+	equipped_weapon = str(data.get("equipped_weapon", equipped_weapon))
+	action_state = int(data.get("action_state", action_state))
+	var stats: Dictionary = data.get("stats", {})
+	max_hp = int(stats.get("max_hp", max_hp))
+	max_mp = int(stats.get("max_mp", max_mp))
+	str_stat = int(stats.get("str", str_stat))
+	mag_stat = int(stats.get("mag", mag_stat))
+	skl_stat = int(stats.get("skl", skl_stat))
+	spd_stat = int(stats.get("spd", spd_stat))
+	def_stat = int(stats.get("def", def_stat))
+	res_stat = int(stats.get("res", res_stat))
+	luk_stat = int(stats.get("luk", luk_stat))
+	mov_stat = int(stats.get("mov", mov_stat))
+	current_hp = min(current_hp, max_hp)
+	current_mp = min(current_mp, max_mp)

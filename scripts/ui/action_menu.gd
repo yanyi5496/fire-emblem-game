@@ -14,7 +14,13 @@ func show_for_unit(unit) -> void:
 	var can_act: bool = unit.can_act()
 	$VBoxContainer/MoveButton.visible = can_move
 	$VBoxContainer/AttackButton.visible = can_act
-	$VBoxContainer/SkillButton.visible = can_act and not unit.runtime_state.skills.is_empty()
+	var has_ready_skill := false
+	for skill_id in unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") == "active" and unit.runtime_state.can_use_skill(skill_id):
+			has_ready_skill = true
+			break
+	$VBoxContainer/SkillButton.visible = can_act and has_ready_skill
 	$VBoxContainer/WaitButton.visible = true
 	show()
 

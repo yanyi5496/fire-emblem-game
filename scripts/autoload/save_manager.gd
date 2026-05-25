@@ -2,6 +2,7 @@ extends Node
 
 const SAVE_VERSION := "2.0.0"
 const MIN_SUPPORTED_VERSION := "2.0.0"
+const MIN_LOADABLE_VERSION := "1.5.0"
 const MAX_SLOTS := 10
 const MAX_AUTO_SAVES := 5
 const REQUIRED_SAVE_FIELDS := [
@@ -15,6 +16,12 @@ const REQUIRED_SAVE_FIELDS := [
 	"story_flags",
 	"completed_maps",
 	"settings",
+	"units",
+	"map_state",
+	"resume_scene",
+	"latest_battle_result",
+	"latest_battle_map_id",
+	"latest_battle_turns",
 ]
 
 signal save_completed(slot: int)
@@ -51,8 +58,10 @@ func load_game(slot: int) -> Dictionary:
 	if json.parse(json_str) != OK:
 		return {}
 	var data := json.get_data() as Dictionary
-	if _validate_version(data):
+	if _is_loadable_version(data):
 		_migrate(data)
+		if not _validate_version(data):
+			return {}
 		GameState.from_dict(data)
 		load_completed.emit(slot)
 		return data
@@ -60,6 +69,11 @@ func load_game(slot: int) -> Dictionary:
 
 func _build_save_data() -> Dictionary:
 	var state_data := GameState.to_dict()
+	var tree := get_tree()
+	if tree and tree.current_scene and tree.current_scene.has_method("build_save_snapshot"):
+		var snapshot: Dictionary = tree.current_scene.build_save_snapshot()
+		for key in snapshot.keys():
+			state_data[key] = snapshot[key]
 	state_data["version"] = SAVE_VERSION
 	state_data["timestamp"] = Time.get_unix_time_from_system()
 	state_data["settings"] = {}
@@ -77,6 +91,10 @@ func _validate_version(data: Dictionary) -> bool:
 			return false
 	return true
 
+func _is_loadable_version(data: Dictionary) -> bool:
+	var ver: String = data.get("version", "0.0.0")
+	return ver >= MIN_LOADABLE_VERSION
+
 func _migrate(data: Dictionary) -> void:
 	var ver: String = data.get("version", "0.0.0")
 	if ver < "2.0.0" and data.has("turn_number") and not data.has("turn"):
@@ -85,4 +103,35 @@ func _migrate(data: Dictionary) -> void:
 		data["chapter"] = data.get("map_id", "")
 	if ver < "2.0.0" and not data.has("completed_maps"):
 		data["completed_maps"] = []
+	if not data.has("map_id"):
+		data["map_id"] = ""
+	if not data.has("turn"):
+		data["turn"] = 0
+	if not data.has("gold"):
+		data["gold"] = 0
+	if not data.has("timestamp"):
+		data["timestamp"] = Time.get_unix_time_from_system()
+	if not data.has("inventory"):
+		data["inventory"] = []
+	if not data.has("story_flags"):
+		data["story_flags"] = {}
+	if not data.has("settings"):
+		data["settings"] = {}
+	if not data.has("units"):
+		data["units"] = []
+	if not data.has("map_state"):
+		data["map_state"] = {}
+	if not data.has("latest_battle_result"):
+		data["latest_battle_result"] = ""
+	if not data.has("latest_battle_map_id"):
+		data["latest_battle_map_id"] = data.get("map_id", "")
+	if not data.has("latest_battle_turns"):
+		data["latest_battle_turns"] = int(data.get("turn", 0))
+	if not data.has("resume_scene"):
+		if str(data.get("latest_battle_result", "")) != "":
+			data["resume_scene"] = "result"
+		elif str(data.get("map_id", "")) != "":
+			data["resume_scene"] = "battle"
+		else:
+			data["resume_scene"] = "main_menu"
 	data["version"] = SAVE_VERSION

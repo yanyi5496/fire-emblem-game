@@ -79,14 +79,7 @@ func _calc_hit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
 	if not attacker or not defender:
 		result["hit_rate"] = 50
 		return
-	var base_hit: int = weapon_data.get("hit", 0)
-	var skl: int = attacker.runtime_state.skl_stat
-	var luk: int = attacker.runtime_state.luk_stat
-	var tri_hit: int = result.get("triangle_hit_bonus", 0)
-	var target_spd: int = defender.runtime_state.spd_stat
-	var target_luk: int = defender.runtime_state.luk_stat
-	var raw: int = base_hit + skl * 2 + luk + tri_hit - (target_spd / 2 + target_luk)
-	result["hit_rate"] = clampi(raw, 0, 100)
+	result["hit_rate"] = _calc_hit_value(attacker, defender, weapon_data, result.get("triangle_hit_bonus", 0))
 
 func _calc_crit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
@@ -108,7 +101,8 @@ func _calc_damage(result: Dictionary, weapon_data: Dictionary) -> void:
 	var is_magic: bool = result.get("is_magic", false)
 	var atk_stat: int = attacker.runtime_state.mag_stat if is_magic else attacker.runtime_state.str_stat
 	var def_stat: int = defender.runtime_state.res_stat if is_magic else defender.runtime_state.def_stat
-	result["damage"] = max(0, atk_stat + might + tri_dmg - def_stat)
+	var terrain_bonus: int = _get_terrain_bonus(defender, "defense_bonus")
+	result["damage"] = max(0, atk_stat + might + tri_dmg - (def_stat + terrain_bonus))
 
 func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
@@ -120,21 +114,23 @@ func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
 	if def_weapon_id == "":
 		result["did_counter"] = false
 		return
-	result["did_counter"] = true
 	var def_weapon: Dictionary = DataManager.get_weapon(def_weapon_id)
+	if def_weapon.is_empty():
+		result["did_counter"] = false
+		return
+	if not _can_counter(attacker, defender, def_weapon):
+		result["did_counter"] = false
+		return
+	result["did_counter"] = true
 	var def_might: int = def_weapon.get("might", 0)
-	var tri_dmg: int = -result.get("triangle_dmg_bonus", 0)
 	var is_magic: bool = def_weapon.get("is_magic", false)
 	var atk_stat: int = defender.runtime_state.mag_stat if is_magic else defender.runtime_state.str_stat
 	var def_stat: int = attacker.runtime_state.res_stat if is_magic else attacker.runtime_state.def_stat
-	result["counter_damage"] = max(0, atk_stat + def_might + tri_dmg - def_stat)
-	var def_hit: int = def_weapon.get("hit", 0)
-	var d_skl: int = defender.runtime_state.skl_stat
-	var d_luk: int = defender.runtime_state.luk_stat
-	var a_spd: int = attacker.runtime_state.spd_stat
-	var a_luk: int = attacker.runtime_state.luk_stat
-	var raw: int = def_hit + d_skl * 2 + d_luk - (a_spd / 2 + a_luk)
-	result["counter_hit_rate"] = clampi(raw, 0, 100)
+	var counter_triangle := _calc_triangle_damage_bonus(def_weapon.get("type", ""), weapon_data.get("type", ""))
+	var terrain_bonus: int = _get_terrain_bonus(attacker, "defense_bonus")
+	result["counter_damage"] = max(0, atk_stat + def_might + counter_triangle - (def_stat + terrain_bonus))
+	var counter_hit_bonus := _calc_triangle_hit_bonus(def_weapon.get("type", ""), weapon_data.get("type", ""))
+	result["counter_hit_rate"] = _calc_hit_value(defender, attacker, def_weapon, counter_hit_bonus)
 
 func _calc_follow_up(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
@@ -178,3 +174,62 @@ func _apply_result(result: Dictionary) -> void:
 		var follow_roll: int = randi() % 100
 		if follow_roll < result.get("hit_rate", 0):
 			defender.take_damage(result.get("damage", 0))
+
+func _calc_hit_value(attacker: Node, defender: Node, weapon_data: Dictionary, triangle_hit_bonus: int) -> int:
+	var base_hit: int = weapon_data.get("hit", 0)
+	var skl: int = attacker.runtime_state.skl_stat
+	var luk: int = attacker.runtime_state.luk_stat
+	var target_spd: int = defender.runtime_state.spd_stat
+	var target_luk: int = defender.runtime_state.luk_stat
+	var avoid_bonus: int = _get_terrain_bonus(defender, "avoid_bonus")
+	var height_bonus: int = _get_height(attacker) - _get_height(defender)
+	var raw: int = base_hit + skl * 2 + luk + triangle_hit_bonus + height_bonus - (target_spd / 2 + target_luk + avoid_bonus)
+	return clampi(raw, 0, 100)
+
+func _get_terrain_bonus(unit: Node, key: String) -> int:
+	var scene := _get_battle_scene(unit)
+	if scene and scene.has_method("get_terrain_data_at"):
+		var terrain_data: Dictionary = scene.get_terrain_data_at(unit.grid_pos)
+		return int(terrain_data.get(key, 0))
+	return 0
+
+func _get_height(unit: Node) -> int:
+	return _get_terrain_bonus(unit, "height")
+
+func _get_distance(attacker: Node, defender: Node) -> int:
+	var scene := _get_battle_scene(attacker)
+	if scene and scene.has_method("get_distance"):
+		return int(scene.get_distance(attacker.grid_pos, defender.grid_pos))
+	return abs(attacker.grid_pos.x - defender.grid_pos.x) + abs(attacker.grid_pos.y - defender.grid_pos.y)
+
+func _can_counter(attacker: Node, defender: Node, defender_weapon: Dictionary) -> bool:
+	var distance := _get_distance(attacker, defender)
+	var min_range: int = defender_weapon.get("min_range", 1)
+	var max_range: int = defender_weapon.get("max_range", 1)
+	return distance >= min_range and distance <= max_range
+
+func _calc_triangle_hit_bonus(attacker_type: String, defender_type: String) -> int:
+	if attacker_type == "" or defender_type == "":
+		return 0
+	if WEAPON_TRIANGLE.get(attacker_type, "") == defender_type:
+		return 15
+	if WEAPON_TRIANGLE.get(defender_type, "") == attacker_type:
+		return -15
+	return 0
+
+func _calc_triangle_damage_bonus(attacker_type: String, defender_type: String) -> int:
+	if attacker_type == "" or defender_type == "":
+		return 0
+	if WEAPON_TRIANGLE.get(attacker_type, "") == defender_type:
+		return 1
+	if WEAPON_TRIANGLE.get(defender_type, "") == attacker_type:
+		return -1
+	return 0
+
+func _get_battle_scene(node: Node) -> Node:
+	if not node:
+		return null
+	var tree := node.get_tree()
+	if not tree:
+		return null
+	return tree.current_scene

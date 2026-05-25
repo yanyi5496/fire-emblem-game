@@ -45,7 +45,9 @@ func _execute_enemy_turn() -> void:
 		if unit.team == "enemy" and unit.is_alive():
 			enemy_units.append(unit)
 	ai_controller.execute_turn(enemy_units)
-	bc._check_battle_end()
+	if bc.has_method("has_battle_ended") and bc.has_battle_ended():
+		bc.end_battle(bc.get_battle_result())
+		return
 	start_turn("player")
 
 func end_turn() -> void:
@@ -61,15 +63,20 @@ func end_turn() -> void:
 
 func _execute_round_end() -> void:
 	current_phase = Phase.ROUND_END
-	_process_buff_ticks()
-	_process_debuff_ticks()
 	_process_poison_damage()
+	_process_debuff_ticks()
+	_process_buff_ticks()
 	_process_auto_heal()
 	_process_skill_cooldowns()
 	_reset_unit_states()
 	turn_number += 1
 	GameState.set_turn(turn_number)
+	SaveManager.save_game(1)
 	round_ended.emit()
+	var bc := _get_battle_controller()
+	if bc and bc.has_method("has_battle_ended") and bc.has_battle_ended():
+		bc.end_battle(bc.get_battle_result())
+		return
 	start_turn("player")
 
 func _get_battle_controller() -> Node:
@@ -85,21 +92,48 @@ func _reset_unit_states() -> void:
 			unit.reset_action_state()
 
 func _process_buff_ticks() -> void:
-	var service = _ses_dep.new()
-	var units := get_tree().get_nodes_in_group("units")
-	service.tick_all(units)
+	pass
 
 func _process_debuff_ticks() -> void:
-	pass
+	var service = _ses_dep.new()
+	var units := get_tree().get_nodes_in_group("units")
+	for unit in units:
+		if unit.is_alive():
+			service.tick_effect_durations(unit)
 
 func _process_poison_damage() -> void:
-	pass
+	var service = _ses_dep.new()
+	var units := get_tree().get_nodes_in_group("units")
+	for unit in units:
+		if unit.is_alive():
+			service.apply_poison_tick(unit)
 
 func _process_auto_heal() -> void:
-	pass
+	var units := get_tree().get_nodes_in_group("units")
+	for unit in units:
+		if not unit.is_alive():
+			continue
+		if _has_turn_end_heal(unit):
+			unit.heal(2)
 
 func _process_skill_cooldowns() -> void:
-	pass
+	var units := get_tree().get_nodes_in_group("units")
+	for unit in units:
+		if not unit.is_alive() or not unit.runtime_state:
+			continue
+		var cooldowns: Dictionary = unit.runtime_state.skill_cooldowns
+		for skill_id in cooldowns.keys():
+			cooldowns[skill_id] = max(0, int(cooldowns[skill_id]) - 1)
+		unit.runtime_state.skill_cooldowns = cooldowns
+
+func _has_turn_end_heal(unit) -> bool:
+	if not unit.runtime_state:
+		return false
+	for skill_id in unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("trigger", "") == "turn_end" and skill_data.get("effect", {}).get("type", "") == "heal":
+			return true
+	return false
 
 func _phase_to_string(phase: Phase) -> String:
 	match phase:

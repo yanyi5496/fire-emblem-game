@@ -78,3 +78,33 @@ func die() -> void:
 	_is_alive = false
 	runtime_state.action_state = _urs_dep.ActionState.DEAD
 	died.emit()
+
+func to_save_dict() -> Dictionary:
+	return {
+		"unit_id": unit_id,
+		"team": team,
+		"x": grid_pos.x,
+		"y": grid_pos.y,
+		"is_alive": is_alive(),
+		"current_hp": runtime_state.current_hp if runtime_state else 0,
+		"current_mp": runtime_state.current_mp if runtime_state else 0,
+		"level": runtime_state.level if runtime_state else 1,
+		"exp": runtime_state.exp if runtime_state else 0,
+		"action_state": int(runtime_state.action_state) if runtime_state else 0,
+		"equipped_weapon": runtime_state.equipped_weapon if runtime_state else "",
+		"inventory": runtime_state.inventory.duplicate() if runtime_state else [],
+		"skills": runtime_state.skills.duplicate() if runtime_state else [],
+		"status_effects": runtime_state.status_effects.duplicate(true) if runtime_state else [],
+		"skill_cooldowns": runtime_state.skill_cooldowns.duplicate(true) if runtime_state else {},
+		"stats": runtime_state.get_stats() if runtime_state else {},
+	}
+
+func apply_saved_state(data: Dictionary) -> void:
+	grid_pos = Vector2i(int(data.get("x", grid_pos.x)), int(data.get("y", grid_pos.y)))
+	position = Vector2(grid_pos.x * 64, grid_pos.y * 64)
+	if runtime_state:
+		runtime_state.apply_saved_state(data)
+	_is_alive = bool(data.get("is_alive", true))
+	if not _is_alive and runtime_state:
+		runtime_state.current_hp = 0
+		runtime_state.action_state = _urs_dep.ActionState.DEAD

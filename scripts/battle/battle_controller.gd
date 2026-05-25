@@ -13,7 +13,7 @@ signal battle_ended(result: String)
 signal unit_selected(unit: Node)
 signal action_executed(action: String)
 
-enum BattleInteractionState { IDLE, UNIT_SELECTED, MOVING, ACTION_MENU, TARGETING, ATTACK_PREVIEW }
+enum BattleInteractionState { IDLE, UNIT_SELECTED, MOVING, ACTION_MENU, TARGETING, ATTACK_PREVIEW, HEAL_TARGETING }
 
 var combat_manager
 var interaction_state: BattleInteractionState = BattleInteractionState.IDLE
@@ -22,6 +22,7 @@ var movement_tiles: Array[Vector2i] = []
 var attack_targets: Array = []
 var pending_target = null
 var pending_combat_result: Dictionary = {}
+var pending_skill_id: String = ""
 var battle_hud: Node = null
 
 @onready var turn_manager = $TurnManager
@@ -46,12 +47,16 @@ func _ready() -> void:
 	if battle_hud:
 		if not battle_hud.end_turn_pressed.is_connected(_on_end_turn_pressed):
 			battle_hud.end_turn_pressed.connect(_on_end_turn_pressed)
+		if battle_hud.has_signal("save_pressed") and not battle_hud.save_pressed.is_connected(_on_save_pressed):
+			battle_hud.save_pressed.connect(_on_save_pressed)
 		var action_menu_node = battle_hud.get_node("ActionMenu") if battle_hud.has_node("ActionMenu") else null
 		if action_menu_node:
 			if not action_menu_node.move_selected.is_connected(_on_action_move):
 				action_menu_node.move_selected.connect(_on_action_move)
 			if not action_menu_node.attack_selected.is_connected(_on_action_attack):
 				action_menu_node.attack_selected.connect(_on_action_attack)
+			if not action_menu_node.skill_selected.is_connected(_on_action_skill):
+				action_menu_node.skill_selected.connect(_on_action_skill)
 			if not action_menu_node.wait_selected.is_connected(_on_action_wait):
 				action_menu_node.wait_selected.connect(_on_action_wait)
 		var preview_node = battle_hud.get_node("AttackPreview") if battle_hud.has_node("AttackPreview") else null
@@ -73,22 +78,42 @@ func start_battle(map_id: String) -> void:
 		push_error("Map data not found: %s" % map_id)
 		return
 	_battle_started_once = true
+	_apply_map_data()
 	_spawn_units()
 	turn_manager.initialize_battle(GameState.turn_number)
 	if not turn_manager.turn_started.is_connected(_on_turn_started):
 		turn_manager.turn_started.connect(_on_turn_started)
+	if not turn_manager.round_ended.is_connected(_on_round_ended):
+		turn_manager.round_ended.connect(_on_round_ended)
+	cursor.position = Vector2.ZERO
+	_update_tile_info(Vector2i.ZERO)
+	if battle_hud:
+		battle_hud.update_turn_info("player", turn_manager.turn_number)
 	turn_manager.start_turn("player")
 	battle_started.emit()
 
 func _on_turn_started(phase: String) -> void:
 	if battle_hud and battle_hud.has_method("update_turn_info"):
 		battle_hud.update_turn_info(phase, turn_manager.turn_number)
+	if phase == "player":
+		_check_battle_end()
+
+func _on_round_ended() -> void:
+	_check_battle_end()
 
 func _spawn_units() -> void:
-	if not map_data.has("units"):
+	var spawn_units: Array = _get_spawn_unit_data()
+	if spawn_units.is_empty():
 		return
-	for u in map_data["units"]:
+	for u in spawn_units:
 		_spawn_unit(u)
+
+func _get_spawn_unit_data() -> Array:
+	if GameState.current_map_id == map_data.get("id", "") and not GameState.battle_units.is_empty():
+		var snapshot_map_id: String = str(GameState.battle_map_state.get("map_id", ""))
+		if snapshot_map_id == GameState.current_map_id:
+			return GameState.battle_units
+	return map_data.get("units", [])
 
 func _spawn_unit(data: Dictionary) -> void:
 	var unit_scene := preload("res://scenes/battle/unit/unit.tscn")
@@ -98,6 +123,8 @@ func _spawn_unit(data: Dictionary) -> void:
 		data.get("team", ""),
 		Vector2i(data.get("x", 0), data.get("y", 0))
 	)
+	if data.has("current_hp"):
+		unit.apply_saved_state(data)
 	units_container.add_child(unit)
 
 func _on_move_cursor(direction: Vector2) -> void:
@@ -106,6 +133,7 @@ func _on_move_cursor(direction: Vector2) -> void:
 		new_pos.x = clampi(new_pos.x, 0, map_data.get("width", 10) - 1)
 		new_pos.y = clampi(new_pos.y, 0, map_data.get("height", 10) - 1)
 		cursor.position = Vector2(new_pos.x * 64, new_pos.y * 64)
+		_update_tile_info(new_pos)
 
 func _on_confirm() -> void:
 	match interaction_state:
@@ -117,6 +145,8 @@ func _on_confirm() -> void:
 			pass
 		BattleInteractionState.TARGETING:
 			_try_attack_target()
+		BattleInteractionState.HEAL_TARGETING:
+			_try_heal_target()
 
 func _on_cancel() -> void:
 	match interaction_state:
@@ -130,6 +160,8 @@ func _on_cancel() -> void:
 			_cancel_targeting()
 		BattleInteractionState.ATTACK_PREVIEW:
 			_cancel_attack_preview()
+		BattleInteractionState.HEAL_TARGETING:
+			_cancel_heal_targeting()
 
 func _try_select_unit() -> void:
 	var cursor_pos := Vector2i(cursor.position.x / 64, cursor.position.y / 64)
@@ -168,12 +200,15 @@ func _start_movement() -> void:
 	var target_pos := Vector2i(cursor.position.x / 64, cursor.position.y / 64)
 	if target_pos not in movement_tiles:
 		return
-	selected_unit.grid_pos = target_pos
-	selected_unit.position = Vector2(target_pos.x * 64, target_pos.y * 64)
-	selected_unit.runtime_state.action_state = _urs_dep.ActionState.MOVED
+	var occupied_unit = get_unit_at(target_pos)
+	if occupied_unit and occupied_unit != selected_unit:
+		return
+	move_unit_to(selected_unit, target_pos)
 	_clear_highlights()
 	interaction_state = BattleInteractionState.ACTION_MENU
-	if battle_hud and battle_hud.has_method("show_action_menu"):
+	if battle_hud and battle_hud.has_method("show_action_menu_for"):
+		battle_hud.show_action_menu_for(selected_unit)
+	elif battle_hud and battle_hud.has_method("show_action_menu"):
 		battle_hud.show_action_menu()
 
 func _cancel_movement() -> void:
@@ -212,9 +247,30 @@ func _on_action_move() -> void:
 func _on_action_attack() -> void:
 	interaction_state = BattleInteractionState.TARGETING
 	attack_targets = _get_enemies_in_range(selected_unit)
+	var tiles: Array[Vector2i] = []
 	for target in attack_targets:
-		var tiles: Array[Vector2i] = [target.grid_pos]
-		_highlight_tiles(tiles)
+		tiles.append(target.grid_pos)
+	_highlight_tiles(tiles)
+
+func _on_action_skill() -> void:
+	if not selected_unit:
+		return
+	for skill_id in selected_unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") != "active":
+			continue
+		if not selected_unit.runtime_state.can_use_skill(skill_id):
+			continue
+		var effect_type: String = skill_data.get("effect", {}).get("type", "")
+		if effect_type == "heal":
+			pending_skill_id = skill_id
+			interaction_state = BattleInteractionState.HEAL_TARGETING
+			var allies := _get_allies_in_skill_range(selected_unit, skill_id)
+			var tiles: Array[Vector2i] = []
+			for ally in allies:
+				tiles.append(ally.grid_pos)
+			_highlight_tiles(tiles)
+			return
 
 func _on_action_wait() -> void:
 	selected_unit.wait()
@@ -269,6 +325,48 @@ func _get_enemies_in_range(unit) -> Array:
 func on_unit_clicked(unit: Node) -> void:
 	unit_selected.emit(unit)
 
+func _get_allies_in_skill_range(unit, skill_id: String) -> Array:
+	var result: Array = []
+	var skill_data: Dictionary = DataManager.get_skill(skill_id)
+	var weapon_data: Dictionary = DataManager.get_weapon(unit.runtime_state.equipped_weapon)
+	var min_range: int = int(weapon_data.get("min_range", 1))
+	var max_range: int = int(weapon_data.get("max_range", 1))
+	for tile in pathfinding.get_attack_range(unit.grid_pos, min_range, max_range, tile_map):
+		var ally = get_unit_at(tile)
+		if ally and ally.team == unit.team and ally.get_current_hp() < ally.get_max_hp():
+			result.append(ally)
+	return result
+
+func _try_heal_target() -> void:
+	var cursor_pos := Vector2i(cursor.position.x / 64, cursor.position.y / 64)
+	var target = get_unit_at(cursor_pos)
+	if not target or target.team != selected_unit.team:
+		return
+	if target.get_current_hp() >= target.get_max_hp():
+		return
+	if pending_skill_id == "":
+		return
+	var skill_data: Dictionary = DataManager.get_skill(pending_skill_id)
+	var amount: int = int(skill_data.get("effect", {}).get("value", 0))
+	target.heal(amount)
+	selected_unit.runtime_state.trigger_skill_cooldown(pending_skill_id)
+	selected_unit.wait()
+	action_executed.emit("skill")
+	if battle_hud and battle_hud.has_method("show_status_message"):
+		battle_hud.show_status_message("%s 为 %s 恢复了 %d HP" % [selected_unit.unit_id, target.unit_id, amount])
+	_clear_highlights()
+	pending_skill_id = ""
+	pending_target = null
+	interaction_state = BattleInteractionState.IDLE
+	selected_unit = null
+	_check_battle_end()
+	if battle_hud and battle_hud.has_method("hide_action_menu"):
+		battle_hud.hide_action_menu()
+
+func _cancel_heal_targeting() -> void:
+	interaction_state = BattleInteractionState.ACTION_MENU
+	_clear_highlights()
+
 func get_unit_at(pos: Vector2i):
 	for unit in units_container.get_children():
 		if unit.grid_pos == pos and unit.is_alive():
@@ -283,11 +381,69 @@ func check_victory_condition() -> String:
 			match unit.team:
 				"player": player_alive = true
 				"enemy": enemy_alive = true
-	if not enemy_alive:
-		return "victory"
-	if not player_alive:
+	if not _is_defeat_condition_met(player_alive):
+		var victory_condition: String = str(map_data.get("victory_condition", "rout"))
+		match victory_condition:
+			"rout":
+				if not enemy_alive:
+					return "victory"
+			"defend", "survive":
+				if _is_turn_limit_reached() and player_alive:
+					return "victory"
+			_:
+				if not enemy_alive:
+					return "victory"
+	if _is_defeat_condition_met(player_alive):
 		return "defeat"
 	return ""
+
+func _is_defeat_condition_met(player_alive: bool) -> bool:
+	var defeat_condition: String = str(map_data.get("defeat_condition", "all_dead"))
+	var victory_condition: String = str(map_data.get("victory_condition", "rout"))
+	if not player_alive:
+		return true
+	if _is_turn_limit_reached() and victory_condition not in ["defend", "survive"]:
+		return true
+	match defeat_condition:
+		"all_dead", "lord_dead":
+			return not player_alive
+		"turn_limit":
+			return _is_turn_limit_reached()
+		_:
+			return false
+
+func _is_turn_limit_reached() -> bool:
+	var max_turns: int = int(map_data.get("max_turns", 0))
+	return max_turns > 0 and turn_manager.turn_number > max_turns
+
+func has_battle_ended() -> bool:
+	return check_victory_condition() != ""
+
+func get_battle_result() -> String:
+	return check_victory_condition()
+
+func _check_battle_end() -> bool:
+	var result := check_victory_condition()
+	if result != "":
+		end_battle(result)
+		return true
+	return false
+
+func end_battle(result: String) -> void:
+	if GameState.current_phase == GameState.GamePhase.BATTLE_RESULT:
+		return
+	build_save_snapshot()
+	GameState.record_battle_result(result, GameState.current_map_id, turn_manager.turn_number)
+	GameState.set_resume_scene("result")
+	if result == "victory":
+		if GameState.current_map_id != "" and GameState.current_map_id not in GameState.completed_maps:
+			GameState.completed_maps.append(GameState.current_map_id)
+		if GameState.current_chapter != "":
+			GameState.story_flags["%s_cleared" % GameState.current_chapter] = true
+	SaveManager.save_game(1)
+	GameState.set_phase(GameState.GamePhase.BATTLE_RESULT)
+	battle_ended.emit(result)
+	SceneRouter.goto("result")
 
 func _on_end_turn_pressed() -> void:
 	interaction_state = BattleInteractionState.IDLE
@@ -297,12 +453,120 @@ func _on_end_turn_pressed() -> void:
 	selected_unit = null
 	turn_manager.end_turn()
 
-func _check_battle_end() -> void:
-	var result := check_victory_condition()
-	if result != "":
-		end_battle(result)
+func move_unit_to(unit: Node, target_pos: Vector2i) -> void:
+	if not unit:
+		return
+	unit.grid_pos = target_pos
+	unit.position = Vector2(target_pos.x * 64, target_pos.y * 64)
+	if unit.runtime_state and unit.runtime_state.action_state == _urs_dep.ActionState.IDLE:
+		unit.runtime_state.action_state = _urs_dep.ActionState.MOVED
 
-func end_battle(result: String) -> void:
-	GameState.set_phase(GameState.GamePhase.BATTLE_RESULT)
-	battle_ended.emit(result)
-	SceneRouter.goto("result")
+func get_enemy_units_for(unit: Node) -> Array:
+	var result: Array = []
+	if not unit:
+		return result
+	for other in units_container.get_children():
+		if other == unit:
+			continue
+		if other.team == unit.team:
+			continue
+		if not other.is_alive():
+			continue
+		result.append(other)
+	return result
+
+func get_walkable_tiles_for(unit: Node) -> Array[Vector2i]:
+	var reachable: Array = pathfinding.get_reachable_tiles(unit.grid_pos, unit.runtime_state.mov_stat, tile_map)
+	var result: Array[Vector2i] = []
+	for tile in reachable:
+		if not is_tile_walkable(tile):
+			continue
+		var occupied = get_unit_at(tile)
+		if occupied and occupied != unit:
+			continue
+		result.append(tile)
+	return result
+
+func get_terrain_id_at(pos: Vector2i) -> String:
+	var terrain_ids: Array = map_data.get("terrain_ids", [])
+	if pos.y < 0 or pos.y >= terrain_ids.size():
+		return "plain"
+	var row: Array = terrain_ids[pos.y]
+	if pos.x < 0 or pos.x >= row.size():
+		return "plain"
+	return str(row[pos.x])
+
+func get_terrain_data_at(pos: Vector2i) -> Dictionary:
+	var terrain_defs: Dictionary = map_data.get("terrain_defs", {})
+	var terrain_id := get_terrain_id_at(pos)
+	return terrain_defs.get(terrain_id, {
+		"move_cost": 1,
+		"avoid_bonus": 0,
+		"defense_bonus": 0,
+		"walkable": true,
+		"height": 0,
+	})
+
+func is_tile_walkable(pos: Vector2i) -> bool:
+	if pos.x < 0 or pos.y < 0:
+		return false
+	if pos.x >= map_data.get("width", 0) or pos.y >= map_data.get("height", 0):
+		return false
+	return bool(get_terrain_data_at(pos).get("walkable", true))
+
+func get_distance(a: Vector2i, b: Vector2i) -> int:
+	return abs(a.x - b.x) + abs(a.y - b.y)
+
+func _apply_map_data() -> void:
+	if not tile_map:
+		return
+	var width: int = map_data.get("width", 0)
+	var height: int = map_data.get("height", 0)
+	var tiles: Array = map_data.get("tiles", [])
+	tile_map.clear()
+	if tile_map.tile_set == null:
+		_update_tile_info(Vector2i.ZERO)
+		return
+	for y in range(min(height, tiles.size())):
+		var row: Array = tiles[y]
+		for x in range(min(width, row.size())):
+			var atlas_x := max(0, int(row[x]) - 1)
+			tile_map.set_cell(0, Vector2i(x, y), 0, Vector2i(atlas_x, 0))
+	_update_tile_info(Vector2i.ZERO)
+
+func _update_tile_info(pos: Vector2i) -> void:
+	if not battle_hud:
+		return
+	var tile_info_panel = battle_hud.get_node("TileInfoPanel") if battle_hud.has_node("TileInfoPanel") else null
+	if tile_info_panel and tile_info_panel.has_method("show_tile_info"):
+		tile_info_panel.show_tile_info(get_terrain_id_at(pos), get_terrain_data_at(pos))
+
+func _on_save_pressed() -> void:
+	if SaveManager.save_game(1) and battle_hud and battle_hud.has_method("show_save_feedback"):
+		battle_hud.show_save_feedback(turn_manager.turn_number, _current_phase_text())
+
+func _current_phase_text() -> String:
+	match int(turn_manager.current_phase):
+		0:
+			return "玩家"
+		1:
+			return "敌方"
+		2:
+			return "友方"
+		_:
+			return "当前"
+
+func build_save_snapshot() -> Dictionary:
+	var units: Array[Dictionary] = []
+	for unit in units_container.get_children():
+		if unit.has_method("to_save_dict"):
+			units.append(unit.to_save_dict())
+	var map_state := {
+		"map_id": GameState.current_map_id,
+		"turn": turn_manager.turn_number,
+	}
+	GameState.update_battle_snapshot(units, map_state)
+	return {
+		"units": units,
+		"map_state": map_state,
+	}
