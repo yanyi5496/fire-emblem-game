@@ -34,8 +34,8 @@ func has_any_save() -> bool:
 			return true
 	return false
 
-func save_game(slot: int) -> bool:
-	var data := _build_save_data()
+func save_game(slot: int, runtime_snapshot: Dictionary = {}) -> bool:
+	var data := _build_save_data(runtime_snapshot)
 	var path := _get_save_path(slot)
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if not file:
@@ -67,13 +67,10 @@ func load_game(slot: int) -> Dictionary:
 		return data
 	return {}
 
-func _build_save_data() -> Dictionary:
+func _build_save_data(runtime_snapshot: Dictionary = {}) -> Dictionary:
 	var state_data := GameState.to_dict()
-	var tree := get_tree()
-	if tree and tree.current_scene and tree.current_scene.has_method("build_save_snapshot"):
-		var snapshot: Dictionary = tree.current_scene.build_save_snapshot()
-		for key in snapshot.keys():
-			state_data[key] = snapshot[key]
+	for key in runtime_snapshot.keys():
+		state_data[key] = runtime_snapshot[key]
 	state_data["version"] = SAVE_VERSION
 	state_data["timestamp"] = Time.get_unix_time_from_system()
 	state_data["settings"] = {}

@@ -9,6 +9,8 @@ const _pathfind_dep := preload("res://scripts/battle/pathfinding_service.gd")
 const _urs_dep := preload("res://scripts/unit/unit_runtime_state.gd")
 const _query_dep := preload("res://scripts/battle/battle_query_service.gd")
 const _victory_dep := preload("res://scripts/battle/victory_judge.gd")
+const _skill_dep := preload("res://scripts/battle/battle_skill_service.gd")
+const _lifecycle_dep := preload("res://scripts/battle/battle_lifecycle_service.gd")
 
 signal battle_started()
 signal battle_ended(result: String)
@@ -30,6 +32,8 @@ var _current_skill_index: int = 0
 var battle_query: Node = null
 var victory_judge = null
 var battle_hud: Node = null
+var skill_service = null
+var battle_lifecycle = null
 
 @onready var turn_manager = $TurnManager
 @onready var cursor: Node2D = $Cursor
@@ -45,6 +49,8 @@ func _ready() -> void:
 	combat_manager = _combat_dep.new()
 	battle_query = _query_dep.new()
 	victory_judge = _victory_dep.new()
+	skill_service = _skill_dep.new()
+	battle_lifecycle = _lifecycle_dep.new()
 	add_child(battle_query)
 	if not InputManager.confirm_pressed.is_connected(_on_confirm):
 		InputManager.confirm_pressed.connect(_on_confirm)
@@ -103,6 +109,8 @@ func start_battle(map_id: String) -> void:
 		turn_manager.round_ended.connect(_on_round_ended)
 	if not turn_manager.battle_check_requested.is_connected(_on_battle_check_requested):
 		turn_manager.battle_check_requested.connect(_on_battle_check_requested)
+	if not turn_manager.checkpoint_requested.is_connected(_on_checkpoint_requested):
+		turn_manager.checkpoint_requested.connect(_on_checkpoint_requested)
 	cursor.position = Vector2.ZERO
 	_update_tile_info(Vector2i.ZERO)
 	if battle_hud:
@@ -276,14 +284,7 @@ func _on_action_attack() -> void:
 func _on_action_skill() -> void:
 	if not selected_unit:
 		return
-	_available_skills.clear()
-	for skill_id in selected_unit.runtime_state.skills:
-		var skill_data: Dictionary = DataManager.get_skill(skill_id)
-		if skill_data.get("type", "") != "active":
-			continue
-		if not selected_unit.runtime_state.can_use_skill(skill_id):
-			continue
-		_available_skills.append(skill_id)
+	_available_skills = skill_service.get_available_skills(selected_unit)
 	if _available_skills.is_empty():
 		return
 	_current_skill_index = 0
@@ -291,28 +292,20 @@ func _on_action_skill() -> void:
 
 func _activate_skill(skill_id: String) -> void:
 	pending_skill_id = skill_id
-	var skill_data: Dictionary = DataManager.get_skill(skill_id)
-	var effect_type: String = skill_data.get("effect", {}).get("type", "")
-	match effect_type:
-		"heal":
-			interaction_state = BattleInteractionState.SKILL_TARGETING
-			var targets := get_skill_range_targets(selected_unit, skill_id, "ally")
-			var tiles: Array[Vector2i] = []
-			for t in targets:
-				tiles.append(t.grid_pos)
-			_highlight_tiles(tiles)
-			return
-		"damage":
-			interaction_state = BattleInteractionState.SKILL_TARGETING
-			var targets := get_skill_range_targets(selected_unit, skill_id, "enemy")
-			var tiles: Array[Vector2i] = []
-			for t in targets:
-				tiles.append(t.grid_pos)
-			_highlight_tiles(tiles)
-			return
-		"stat_bonus":
-			_execute_skill_on_self(selected_unit, skill_id)
-			return
+	var target_group: String = skill_service.get_target_group(skill_id)
+	if target_group == "self":
+		var self_result: Dictionary = skill_service.execute_skill(selected_unit, selected_unit, skill_id)
+		_finish_skill_action(self_result)
+		return
+	interaction_state = BattleInteractionState.SKILL_TARGETING
+	var tiles: Array[Vector2i] = skill_service.get_target_tiles(
+		selected_unit,
+		skill_id,
+		battle_query,
+		pathfinding,
+		tile_map
+	)
+	_highlight_tiles(tiles)
 
 func _on_action_wait() -> void:
 	selected_unit.wait()
@@ -368,109 +361,46 @@ func on_unit_clicked(unit: Node) -> void:
 	unit_selected.emit(unit)
 
 func get_skill_range(unit, skill_id: String) -> Vector2i:
-	var skill_data: Dictionary = DataManager.get_skill(skill_id)
-	if skill_data.has("range"):
-		return Vector2i(int(skill_data["range"].get("min", 1)), int(skill_data["range"].get("max", 1)))
-	var weapon_data: Dictionary = DataManager.get_weapon(unit.runtime_state.equipped_weapon)
-	return Vector2i(int(weapon_data.get("min_range", 1)), int(weapon_data.get("max_range", 1)))
+	return skill_service.get_skill_range(unit, skill_id)
 
 func get_skill_range_targets(unit, skill_id: String, target_group: String) -> Array:
-	var result: Array = []
-	var skill_range: Vector2i = get_skill_range(unit, skill_id)
-	var tiles: Array[Vector2i] = pathfinding.get_attack_range(unit.grid_pos, skill_range.x, skill_range.y, tile_map)
-	var skill_data: Dictionary = DataManager.get_skill(skill_id)
-	var effect_type: String = skill_data.get("effect", {}).get("type", "")
-	for tile in tiles:
-		var u = get_unit_at(tile)
-		if not u or not u.is_alive():
-			continue
-		if target_group == "ally" and u.team == unit.team:
-			if effect_type == "heal" and u.get_current_hp() >= u.get_max_hp():
-				continue
-			result.append(u)
-		elif target_group == "enemy" and u.team != unit.team:
-			result.append(u)
-	return result
+	var result: Array = skill_service.get_skill_targets(unit, skill_id, battle_query, pathfinding, tile_map)
+	if target_group == "":
+		return result
+	return result.filter(
+		func(target): return (
+			(target_group == "ally" and target.team == unit.team) or
+			(target_group == "enemy" and target.team != unit.team) or
+			(target_group == "self" and target == unit)
+		)
+	)
 
 func _try_skill_target() -> void:
 	var cursor_pos := Vector2i(cursor.position.x / 64, cursor.position.y / 64)
 	var target = get_unit_at(cursor_pos)
 	if not target:
 		return
-	if pending_skill_id == "":
+	if pending_skill_id == "" or not selected_unit:
 		return
-	var skill_data: Dictionary = DataManager.get_skill(pending_skill_id)
-	var effect_type: String = skill_data.get("effect", {}).get("type", "")
-	var effect_value: int = int(skill_data.get("effect", {}).get("value", 0))
-	match effect_type:
-		"heal":
-			if target.team != selected_unit.team:
-				return
-			if target.get_current_hp() >= target.get_max_hp():
-				return
-			target.heal(effect_value)
-			selected_unit.runtime_state.trigger_skill_cooldown(pending_skill_id)
-			selected_unit.wait()
-			action_executed.emit("skill")
-			if battle_hud and battle_hud.has_method("show_status_message"):
-				battle_hud.show_status_message("%s 为 %s 恢复了 %d HP" % [selected_unit.unit_id, target.unit_id, effect_value])
-		"damage":
-			if target.team == selected_unit.team:
-				return
-			selected_unit.attack(target)
-			var attack_stat: String = skill_data.get("effect", {}).get("stat", "str")
-			var raw_damage: int = effect_value
-			if attack_stat == "mag":
-				raw_damage += selected_unit.runtime_state.mag_stat
-			else:
-				raw_damage += selected_unit.runtime_state.str_stat
-			var def_val: int = target.runtime_state.def_stat
-			if skill_data.get("effect", {}).get("magic", false):
-				def_val = target.runtime_state.res_stat
-			var final_damage: int = max(0, raw_damage - def_val / 2)
-			target.take_damage(final_damage)
-			selected_unit.runtime_state.trigger_skill_cooldown(pending_skill_id)
-			selected_unit.wait()
-			action_executed.emit("skill")
-			if battle_hud and battle_hud.has_method("show_status_message"):
-				battle_hud.show_status_message("%s 对 %s 造成了 %d 点伤害" % [selected_unit.unit_id, target.unit_id, final_damage])
-	_clear_highlights()
-	pending_skill_id = ""
-	pending_target = null
-	interaction_state = BattleInteractionState.IDLE
-	selected_unit = null
-	_check_battle_end()
-	if battle_hud and battle_hud.has_method("hide_action_menu"):
-		battle_hud.hide_action_menu()
+	var result: Dictionary = skill_service.execute_skill(selected_unit, target, pending_skill_id)
+	if not result.get("success", false):
+		return
+	_finish_skill_action(result)
 
 func _cancel_skill_targeting() -> void:
 	interaction_state = BattleInteractionState.ACTION_MENU
 	_clear_highlights()
 
-func _execute_skill_on_self(unit, skill_id: String) -> void:
-	var skill_data: Dictionary = DataManager.get_skill(skill_id)
-	var effect: Dictionary = skill_data.get("effect", {})
-	var effect_type: String = effect.get("type", "")
-	if effect_type == "stat_bonus":
-		var stat_name: String = effect.get("stat", "")
-		var bonus: int = int(effect.get("value", 0))
-		var duration: int = int(effect.get("duration", 1))
-		match stat_name:
-			"str": unit.runtime_state.str_stat += bonus
-			"mag": unit.runtime_state.mag_stat += bonus
-			"def": unit.runtime_state.def_stat += bonus
-			"res": unit.runtime_state.res_stat += bonus
-			"spd": unit.runtime_state.spd_stat += bonus
-			"skl": unit.runtime_state.skl_stat += bonus
-			"luk": unit.runtime_state.luk_stat += bonus
-		var buff_effect: Dictionary = {"id": "stat_buff_%s" % stat_name, "duration": duration, "stat": stat_name, "value": bonus}
-		unit.runtime_state.status_effects.append(buff_effect)
-		unit.runtime_state.trigger_skill_cooldown(skill_id)
-		if battle_hud and battle_hud.has_method("show_status_message"):
-			battle_hud.show_status_message("%s 使用了 %s" % [unit.unit_id, skill_data.get("name", skill_id)])
+func _finish_skill_action(result: Dictionary) -> void:
 	_clear_highlights()
 	pending_skill_id = ""
-	unit.wait()
+	pending_target = null
+	interaction_state = BattleInteractionState.IDLE
+	if result.get("success", false):
+		action_executed.emit(str(result.get("action", "skill")))
+		if battle_hud and battle_hud.has_method("show_status_message"):
+			battle_hud.show_status_message(str(result.get("message", "")))
+	selected_unit = null
 	_check_battle_end()
 	if battle_hud and battle_hud.has_method("hide_action_menu"):
 		battle_hud.hide_action_menu()
@@ -508,16 +438,13 @@ func _check_battle_end() -> bool:
 func end_battle(result: String) -> void:
 	if GameState.current_phase == GameState.GamePhase.BATTLE_RESULT:
 		return
-	build_save_snapshot()
-	GameState.record_battle_result(result, GameState.current_map_id, turn_manager.turn_number)
-	GameState.set_resume_scene("result")
-	if result == "victory":
-		if GameState.current_map_id != "" and GameState.current_map_id not in GameState.completed_maps:
-			GameState.completed_maps.append(GameState.current_map_id)
-		if GameState.current_chapter != "":
-			GameState.story_flags["%s_cleared" % GameState.current_chapter] = true
-	SaveManager.save_game(1)
-	GameState.set_phase(GameState.GamePhase.BATTLE_RESULT)
+	battle_lifecycle.finalize_battle(
+		result,
+		units_container,
+		turn_manager.turn_number,
+		GameState.current_map_id,
+		GameState.current_chapter
+	)
 	battle_ended.emit(result)
 	SceneRouter.goto("result")
 
@@ -592,8 +519,11 @@ func _update_tile_info(pos: Vector2i) -> void:
 		tile_info_panel.show_tile_info(get_terrain_id_at(pos), get_terrain_data_at(pos))
 
 func _on_save_pressed() -> void:
-	if SaveManager.save_game(1) and battle_hud and battle_hud.has_method("show_save_feedback"):
+	if battle_lifecycle.save_checkpoint(1, units_container, turn_manager.turn_number, GameState.current_map_id) and battle_hud and battle_hud.has_method("show_save_feedback"):
 		battle_hud.show_save_feedback(turn_manager.turn_number, _current_phase_text())
+
+func _on_checkpoint_requested(slot: int) -> void:
+	battle_lifecycle.save_checkpoint(slot, units_container, turn_manager.turn_number, GameState.current_map_id)
 
 func _current_phase_text() -> String:
 	match int(turn_manager.current_phase):
@@ -607,16 +537,4 @@ func _current_phase_text() -> String:
 			return "当前"
 
 func build_save_snapshot() -> Dictionary:
-	var units: Array[Dictionary] = []
-	for unit in units_container.get_children():
-		if unit.has_method("to_save_dict"):
-			units.append(unit.to_save_dict())
-	var map_state := {
-		"map_id": GameState.current_map_id,
-		"turn": turn_manager.turn_number,
-	}
-	GameState.update_battle_snapshot(units, map_state)
-	return {
-		"units": units,
-		"map_state": map_state,
-	}
+	return battle_lifecycle.build_snapshot(units_container, turn_manager.turn_number, GameState.current_map_id)

@@ -9,6 +9,7 @@ signal turn_started(phase: String)
 signal turn_ended(phase: String)
 signal round_ended()
 signal battle_check_requested()
+signal checkpoint_requested(slot: int)
 
 enum Phase { PLAYER, ENEMY, NPC, ROUND_END }
 
@@ -78,7 +79,7 @@ func _execute_round_end() -> void:
 	_reset_unit_states()
 	turn_number += 1
 	GameState.set_turn(turn_number)
-	SaveManager.save_game(1)
+	checkpoint_requested.emit(1)
 	round_ended.emit()
 	battle_check_requested.emit()
 	if has_battle_ended():

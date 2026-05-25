@@ -87,7 +87,13 @@ func _evaluate_heal(unit: Node):
 		if not unit.runtime_state.can_use_skill(skill_id):
 			continue
 		if skill_data.get("effect", {}).get("type", "") == "heal":
-			var allies: Array = battle_controller.get_skill_range_targets(unit, skill_id, "ally")
+			var allies: Array = battle_controller.skill_service.get_skill_targets(
+				unit,
+				skill_id,
+				battle_controller.battle_query,
+				battle_controller.pathfinding,
+				battle_controller.tile_map
+			)
 			if allies.is_empty():
 				return null
 			var best_ally = allies[0]
@@ -148,10 +154,9 @@ func _execute_skill_heal(unit: Node, target: Node, battle_controller: Node) -> v
 		if not unit.runtime_state.can_use_skill(skill_id):
 			continue
 		if skill_data.get("effect", {}).get("type", "") == "heal":
-			var amount: int = int(skill_data.get("effect", {}).get("value", 0))
-			target.heal(amount)
-			unit.runtime_state.trigger_skill_cooldown(skill_id)
-			unit.wait()
+			var result: Dictionary = battle_controller.skill_service.execute_skill(unit, target, skill_id)
+			if result.get("success", false):
+				return
 			return
 	unit.wait()
 

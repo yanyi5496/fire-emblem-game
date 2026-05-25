@@ -51,10 +51,12 @@ BattleScene
  ├── Cursor               — 玩家光标
  ├── Camera2D             — 摄像机
  ├── UI                   — 战斗界面
- ├── TurnManager          — 回合管理 (emit battle_check_requested)
- ├── CombatManager        — 战斗计算
+ ├── TurnManager          — 回合管理 (emit battle_check_requested / checkpoint_requested)
+ ├── CombatManager        — 普通攻击计算
  ├── BattleQueryService   — 单位/地形查询 (依赖注入, 被 AI/寻路使用)
+ ├── BattleSkillService   — 技能筛选与技能执行
  ├── VictoryJudge         — 胜负判定 (依赖注入)
+ ├── BattleLifecycleService — 战斗快照、自动存档、结果收口
  ├── PathfindingService   — 寻路 (使用 BattleQueryService)
  ├── AIController         — AI (使用 BattleQueryService)
  └── AudioManager         — 音频管理
@@ -73,10 +75,10 @@ Unit
 
 ### 核心系统间关系
 
-- **回合系统**驱动 Player/Enemy/NPC 轮流行动，`TurnManager` 通过 `battle_check_requested` 信号通知 `BattleController` 检查胜负，不直接调用 BC
+- **回合系统**驱动 Player/Enemy/NPC 轮流行动，`TurnManager` 通过 `battle_check_requested` / `checkpoint_requested` 信号通知 `BattleController` 检查胜负与触发回合结算存档，不直接调用 BC
 - **战斗公式**：Damage = Attack - Defense；Hit = WeaponHit + Skill×2 + Luck；Crit = Skill/2 + WeaponCrit
 - **武器克制**：剑>斧>枪>剑，克制方命中+15、伤害+1
-- **AI 优先级**：击杀 > 治疗 > 残血 > 移动攻击，AI 通过 `BattleQueryService` 查询战场数据，不直接依赖 `BattleController`
+- **AI 优先级**：击杀 > 治疗 > 残血 > 移动攻击，AI 通过 `BattleQueryService` 和 `BattleSkillService` 查询/执行技能，不直接复制技能结算逻辑
 - **寻路系统**通过 `BattleQueryService` 获取地形和单位位置，不通过 scene tree 反查
 - **胜负判定**：`VictoryJudge` 独立计算，支持 rout/defend/survive + all_dead/lord_dead/turn_limit
 - **成长系统**：升级时按成长率随机提升属性
@@ -109,13 +111,14 @@ Unit
 - 在多个系统里各自独立递增回合数
 - 依赖某个局部节点变量作为唯一回合真相
 
-### 3. SaveManager 只序列化受控 schema
+### 3. SaveManager 只序列化受控 schema 和显式快照
 
 存档不是任意字典快照，而是受控 schema。
 
 强制要求：
 
 - `SaveManager` 只能保存 `GameState` 已声明的稳定字段
+- 战斗运行时快照必须由调用方显式传入 `save_game(slot, runtime_snapshot)`，不得由 `SaveManager` 通过 `current_scene` 反查
 - 只要存档字段结构发生不兼容变化，必须升级 `SAVE_VERSION`
 - `_validate_version()` 不能只检查有没有 `version` 字段，必须验证版本和关键字段
 - 如果要兼容旧档，必须显式写迁移逻辑
@@ -124,6 +127,7 @@ Unit
 
 - 变更存档结构但不改版本号
 - 读档成功却 silently 回退默认值
+- 在 `SaveManager` 内部偷偷探测当前场景并拼接 battle 数据
 
 ### 4. SceneRouter 只负责切场景，不负责业务真相
 
@@ -220,7 +224,33 @@ Unit
 - 在 `PathfindingService`、`AIController` 中通过 scene tree 反查 `BattleController` 获取查询数据
 - 新增脚本直接访问 `BattleController.units_container` 或 `BattleController.map_data`
 
-### 10. VictoryJudge 是胜负判定的唯一权威
+### 10. BattleSkillService 是技能执行的唯一入口
+
+主动技能的目标筛选、目标分组和效果执行统一收口在 `BattleSkillService`。
+
+强制要求：
+- 玩家释放主动技能与 AI 释放主动技能，必须走同一套 `BattleSkillService.execute_skill()`
+- 新增技能目标规则时，优先改 `BattleSkillService.get_target_group()` / `get_skill_targets()`
+- 新增技能结算时，优先改 `BattleSkillService`，不要把技能伤害/治疗直接写回 `BattleController` 或 `AIController`
+
+禁止：
+- 在 `BattleController` 中直接手写技能伤害、治疗、Buff 结算
+- 在 `AIController` 中复制一套玩家技能逻辑
+
+### 11. BattleLifecycleService 是战斗快照与结果收口入口
+
+战斗中的自动存档、手动存档、战斗结束快照与结果落盘统一收口在 `BattleLifecycleService`。
+
+强制要求：
+- `BattleController` 手动存档按钮必须通过 `BattleLifecycleService.save_checkpoint()`
+- 回合结算自动存档必须由 `TurnManager` 发信号，再由 `BattleController` 转给 `BattleLifecycleService`
+- 战斗结束时由 `BattleLifecycleService.finalize_battle()` 统一更新 battle snapshot、最近战斗结果和存档
+
+禁止：
+- `TurnManager` 直接调用 `SaveManager.save_game()`
+- 在多个 battle 脚本里分别手写 battle snapshot 拼装逻辑
+
+### 12. VictoryJudge 是胜负判定的唯一权威
 
 胜负判定逻辑在 `VictoryJudge` 中实现，`BattleController` 保留同名方法做委托。
 
@@ -230,16 +260,16 @@ Unit
 - `TurnManager` 不直接调用 `BattleController.end_battle()`，而是通过 `battle_check_requested` 信号触发检查
 - `BattleController._check_battle_end()` 监听该信号并执行实际结算
 
-### 11. TurnManager 使用信号通信，不直接调用 BattleController
+### 13. TurnManager 使用信号通信，不直接调用 BattleController
 
-`TurnManager` 在敌方行动结束和回合结算结束后，通过 `battle_check_requested` 信号通知 `BattleController` 检查战斗是否结束，而非直接调用 `BattleController.end_battle()`。
+`TurnManager` 在敌方行动结束和回合结算结束后，通过 `battle_check_requested` 信号通知 `BattleController` 检查战斗是否结束；通过 `checkpoint_requested` 通知 battle 层保存回合快照，而非直接调用 `BattleController.end_battle()` 或 `SaveManager.save_game()`。
 
 强制要求：
 - `TurnManager` 不 import 或 preload `BattleController`
 - `TurnManager` 不调用 `BattleController` 的任何方法
-- 新增回合阶段结束时如有胜负检查需求，必须通过新增信号而非直接调用
+- 新增回合阶段结束时如有胜负检查或自动存档需求，必须通过新增信号而非直接调用
 
-### 12. GameState 区分运行时状态与持久化状态
+### 14. GameState 区分运行时状态与持久化状态
 
 `GameState` 承载两类不同生命周期的数据：
 
@@ -257,16 +287,16 @@ Unit
 - `reset()` 清除全部状态
 - 新加字段时必须明确属于哪一类，写入对应区域
 
-### 13. BattleController 不超 500 行
+### 15. BattleController 不超 500 行
 
 `BattleController` 承担玩家输入路由、状态机、单位操作等职责，但不应无限制膨胀。
 
 职责边界：
-- **属于 BC**：`_ready`, `start_battle`, 状态机 (`_on_confirm/_on_cancel/_on_action_*`), 单位移动, 攻击/技能操作, 战斗结束
-- **不属于 BC**：胜负判定 → `VictoryJudge`；战场查询 → `BattleQueryService`；回合推进 → `TurnManager`；输入路由 → `InputManager`
+- **属于 BC**：`_ready`, `start_battle`, 状态机 (`_on_confirm/_on_cancel/_on_action_*`), 单位移动, 攻击操作, UI 协调
+- **不属于 BC**：胜负判定 → `VictoryJudge`；战场查询 → `BattleQueryService`；技能执行 → `BattleSkillService`；战斗快照/结果 → `BattleLifecycleService`；回合推进 → `TurnManager`；输入路由 → `InputManager`
 
 强制要求：
-- 新增功能若导致 BC 超过 550 行，必须先提取新服务
+- 新增功能若导致 BC 超过 500 行，必须先提取新服务
 - 新服务优先使用 `RefCounted`（轻量），需要场景生命周期的再用 `Node`
 
 ## 编码约束

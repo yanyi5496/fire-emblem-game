@@ -24,6 +24,8 @@ func run() -> Dictionary:
 		"res://scripts/battle/battle_controller.gd",
 		"res://scripts/battle/victory_judge.gd",
 		"res://scripts/battle/battle_query_service.gd",
+		"res://scripts/battle/battle_skill_service.gd",
+		"res://scripts/battle/battle_lifecycle_service.gd",
 		"res://scripts/ui/battle_hud.gd",
 		"res://scripts/ui/action_menu.gd",
 		"res://scripts/ui/attack_preview.gd",
@@ -42,6 +44,7 @@ func run() -> Dictionary:
 		"res://test/test_story_parser.gd",
 		"res://test/test_save_load_flow.gd",
 		"res://test/test_ai_behavior.gd",
+		"res://test/test_battle_skill_service.gd",
 	]
 
 	for sp in script_paths:

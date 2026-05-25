@@ -86,6 +86,19 @@ func run() -> Dictionary:
 		details.append("FAIL: legacy runtime save was not normalized into current schema")
 		all_pass = false
 
+	var explicit_snapshot := {
+		"units": [{"unit_id": "hero_001"}],
+		"map_state": {"map_id": "mvp_map_01", "turn": 7},
+	}
+	var built_data := SaveManager._build_save_data(explicit_snapshot)
+	var built_units: Array = built_data.get("units", [])
+	var built_map_state: Dictionary = built_data.get("map_state", {})
+	if built_units.size() == 1 and built_map_state.get("turn", 0) == 7:
+		details.append("PASS: _build_save_data merges explicit runtime snapshot")
+	else:
+		details.append("FAIL: _build_save_data did not merge explicit runtime snapshot")
+		all_pass = false
+
 	var roundtrip := save_data.duplicate()
 	GameState.reset()
 	GameState.from_dict(roundtrip)
