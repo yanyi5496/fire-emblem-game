@@ -4,7 +4,7 @@ class_name MainMenu
 
 const DEFAULT_STORY_SCENE := "story"
 
-@onready var continue_button: Button = $MarginContainer/VBoxContainer/ContinueButton
+@onready var continue_button: Button = $CenterContainer/VBoxContainer/ContinueButton
 
 func _ready() -> void:
 	GameState.set_phase(GameState.GamePhase.TITLE)

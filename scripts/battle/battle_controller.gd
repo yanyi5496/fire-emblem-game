@@ -100,6 +100,7 @@ func start_battle(map_id: String) -> void:
 		push_error("Map data not found: %s" % map_id)
 		return
 	_battle_started_once = true
+	_setup_tileset()
 	_apply_map_data()
 	_spawn_units()
 	if battle_query:
@@ -612,6 +613,26 @@ func get_distance(a: Vector2i, b: Vector2i) -> int:
 		return battle_query.get_distance(a, b)
 	return abs(a.x - b.x) + abs(a.y - b.y)
 
+func _setup_tileset() -> void:
+	if not tile_map:
+		return
+	if tile_map.tile_set != null:
+		return
+	var tileset := TileSet.new()
+	var tile_paths := [
+		"res://assets/sprites/tiles/tile_plain.png",
+		"res://assets/sprites/tiles/tile_forest.png",
+		"res://assets/sprites/tiles/tile_mountain.png",
+	]
+	for path in tile_paths:
+		var tex := load(path) as Texture2D
+		if tex:
+			var atlas := TileSetAtlasSource.new()
+			atlas.texture = tex
+			atlas.texture_region_size = Vector2i(64, 64)
+			tileset.add_source(atlas, tileset.get_source_count())
+	tile_map.tile_set = tileset
+
 func _apply_map_data() -> void:
 	if not tile_map:
 		return
@@ -625,8 +646,8 @@ func _apply_map_data() -> void:
 	for y in range(min(height, tiles.size())):
 		var row: Array = tiles[y]
 		for x in range(min(width, row.size())):
-			var atlas_x := max(0, int(row[x]) - 1)
-			tile_map.set_cell(0, Vector2i(x, y), 0, Vector2i(atlas_x, 0))
+			var tile_val := max(1, int(row[x]))
+			tile_map.set_cell(0, Vector2i(x, y), tile_val - 1, Vector2i(0, 0))
 	_update_tile_info(Vector2i.ZERO)
 
 func _update_tile_info(pos: Vector2i) -> void:

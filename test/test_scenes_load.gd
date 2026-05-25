@@ -36,7 +36,7 @@ func run() -> Dictionary:
 			"UI",
 		],
 		"res://scenes/battle/unit/unit.tscn": [
-			"AnimatedSprite2D",
+			"Sprite2D",
 			"AnimationPlayer",
 		],
 		"res://scenes/battle/ui/battle_hud.tscn": [
@@ -68,10 +68,10 @@ func run() -> Dictionary:
 			"ChoiceContainer",
 		],
 		"res://scenes/menu/main_menu.tscn": [
-			"MarginContainer/VBoxContainer/NewGameButton",
-			"MarginContainer/VBoxContainer/ContinueButton",
-			"MarginContainer/VBoxContainer/SettingsButton",
-			"MarginContainer/VBoxContainer/QuitButton",
+			"CenterContainer/VBoxContainer/NewGameButton",
+			"CenterContainer/VBoxContainer/ContinueButton",
+			"CenterContainer/VBoxContainer/SettingsButton",
+			"CenterContainer/VBoxContainer/QuitButton",
 		],
 		"res://scenes/menu/battle_result_menu.tscn": [
 			"MarginContainer/VBoxContainer/ResultLabel",

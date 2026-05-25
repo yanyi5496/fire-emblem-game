@@ -18,7 +18,7 @@ var runtime_state
 var grid_pos: Vector2i
 var _is_alive: bool = true
 
-@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var sprite: Sprite2D = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 
 func play_animation(anim_name: String) -> void:
@@ -43,6 +43,26 @@ func setup(id: String, unit_team: String, pos: Vector2i) -> void:
 	runtime_state.setup_from_template(id)
 	add_child(runtime_state)
 	add_to_group("units")
+	_load_sprite(id, unit_team)
+
+func _load_sprite(id: String, unit_team: String) -> void:
+	var sprite_node := get_node("Sprite2D") as Sprite2D
+	if not sprite_node:
+		return
+	var sprite_path := "res://assets/sprites/units/sprite_%s.png" % id
+	var tex := load(sprite_path) as Texture2D
+	if tex:
+		sprite_node.texture = tex
+		sprite_node.scale = Vector2(2.0, 2.0)
+		return
+	if unit_team == "player":
+		sprite_path = "res://assets/sprites/units/sprite_hero_001.png"
+	elif unit_team == "enemy":
+		sprite_path = "res://assets/sprites/units/sprite_enemy_001.png"
+	var fallback := load(sprite_path) as Texture2D
+	if fallback:
+		sprite_node.texture = fallback
+		sprite_node.scale = Vector2(2.0, 2.0)
 
 func reset_action_state() -> void:
 	if runtime_state:
