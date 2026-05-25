@@ -63,6 +63,10 @@ func run() -> Dictionary:
 
 	GameState.battle_units = [{"unit_id": "hero_001", "x": 1, "y": 1, "current_hp": 18, "action_state": 2}]
 	GameState.battle_map_state = {"map_id": "mvp_map_01", "turn": 5}
+	GameState.resume_scene = "battle"
+	GameState.latest_battle_result = "defeat"
+	GameState.latest_battle_map_id = "mvp_map_01"
+	GameState.latest_battle_turns = 5
 	var roundtrip_data := GameState.to_dict()
 	GameState.reset()
 	GameState.from_dict(roundtrip_data)

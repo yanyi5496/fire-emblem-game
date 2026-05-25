@@ -7,6 +7,13 @@ const _combat_dep := preload("res://scripts/battle/combat_manager.gd")
 
 enum AIType { AGGRESSIVE, DEFENSIVE, SUPPORT, BOSS, PATROL }
 
+const SCORE_KILL := 100
+const SCORE_LOW_HP := 30
+const SCORE_DAMAGE_PER_HP := 3
+const SCORE_HEAL := 40
+const SCORE_NEAREST := 10
+const SCORE_MOVE_TO_ATTACK := 5
+
 func execute_turn(units: Array[Node]) -> void:
 	for unit in units:
 		if not unit.is_alive():
@@ -20,29 +27,30 @@ func _decide_action(unit: Node) -> Dictionary:
 	var battle_controller := _get_battle_controller(unit)
 	if not battle_controller:
 		return { "type": "wait" }
-	var in_range_targets: Array = battle_controller._get_enemies_in_range(unit)
+
 	var best_action := { "type": "wait", "score": -999 }
+
+	var in_range_targets: Array = battle_controller._get_enemies_in_range(unit)
 	for target in in_range_targets:
 		var score := _evaluate_attack(unit, target)
 		if score > best_action.get("score", -999):
 			best_action = { "type": "attack", "target": target, "score": score }
-	if best_action.get("type", "wait") == "attack":
+
+	var heal_target = _evaluate_heal(unit)
+	if heal_target != null:
+		var heal_score: int = SCORE_HEAL
+		if heal_score > best_action.get("score", -999):
+			best_action = { "type": "heal", "target": heal_target, "score": heal_score }
+
+	if best_action.get("type", "wait") in ["attack", "heal"]:
 		return best_action
+
 	var move_target: Vector2i = _find_move_target(unit, battle_controller)
 	if move_target != unit.grid_pos:
-		return { "type": "move", "target_pos": move_target }
-	return best_action
+		var move_score: int = _evaluate_move_target(unit, move_target, battle_controller)
+		return { "type": "move", "target_pos": move_target, "score": move_score }
 
-func _find_targets(unit: Node) -> Array[Node]:
-	var result: Array[Node] = []
-	var units := get_tree().get_nodes_in_group("units")
-	for u in units:
-		if u.team == unit.team:
-			continue
-		if not u.is_alive():
-			continue
-		result.append(u)
-	return result
+	return best_action
 
 func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var score := 0
@@ -53,10 +61,48 @@ func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var result = combat.simulate(attacker, target, weapon_id)
 	var damage = result.get("damage", 0)
 	if damage >= target.get_current_hp():
-		score += 100
-	score += damage * 3
+		score += SCORE_KILL
+	score += damage * SCORE_DAMAGE_PER_HP
 	if target.get_current_hp() < target.get_max_hp() * 0.3:
-		score += 30
+		score += SCORE_LOW_HP
+	return score
+
+func _evaluate_heal(unit: Node):
+	if not unit.runtime_state:
+		return null
+	var battle_controller := _get_battle_controller(unit)
+	if not battle_controller:
+		return null
+	for skill_id in unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") != "active":
+			continue
+		if not unit.runtime_state.can_use_skill(skill_id):
+			continue
+		if skill_data.get("effect", {}).get("type", "") == "heal":
+			var allies: Array = battle_controller._get_skill_range_targets(unit, skill_id, "ally")
+			if allies.is_empty():
+				return null
+			var best_ally = allies[0]
+			var lowest_hp: int = best_ally.get_current_hp()
+			for ally in allies:
+				if ally.get_current_hp() < lowest_hp:
+					lowest_hp = ally.get_current_hp()
+					best_ally = ally
+			return best_ally
+	return null
+
+func _evaluate_move_target(unit: Node, tile: Vector2i, battle_controller: Node) -> int:
+	var score := 0
+	var targets: Array = battle_controller.get_enemy_units_for(unit)
+	if targets.is_empty():
+		return score
+	var nearest_dist: int = 999
+	for target in targets:
+		var dist: int = battle_controller.get_distance(tile, target.grid_pos)
+		if dist < nearest_dist:
+			nearest_dist = dist
+	score = max(0, 30 - nearest_dist)
 	return score
 
 func _execute_action(unit: Node, action: Dictionary) -> void:
@@ -77,11 +123,30 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 				if follow_up_action.get("type", "wait") == "attack":
 					_execute_action(unit, follow_up_action)
 				else:
-					unit.wait()
+					var heal_target = _evaluate_heal(unit)
+					if heal_target != null:
+						_execute_skill_heal(unit, heal_target, battle_controller)
+					else:
+						unit.wait()
 			else:
 				unit.wait()
 		_:
 			unit.wait()
+
+func _execute_skill_heal(unit: Node, target: Node, battle_controller: Node) -> void:
+	for skill_id in unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") != "active":
+			continue
+		if not unit.runtime_state.can_use_skill(skill_id):
+			continue
+		if skill_data.get("effect", {}).get("type", "") == "heal":
+			var amount: int = int(skill_data.get("effect", {}).get("value", 0))
+			target.heal(amount)
+			unit.runtime_state.trigger_skill_cooldown(skill_id)
+			unit.wait()
+			return
+	unit.wait()
 
 func _best_attack_action(unit: Node, battle_controller: Node) -> Dictionary:
 	var in_range_targets: Array = battle_controller._get_enemies_in_range(unit)
@@ -96,13 +161,7 @@ func _find_move_target(unit: Node, battle_controller: Node) -> Vector2i:
 	var targets: Array = battle_controller.get_enemy_units_for(unit)
 	if targets.is_empty():
 		return unit.grid_pos
-	var primary_target: Node = targets[0]
-	var best_distance: int = battle_controller.get_distance(unit.grid_pos, primary_target.grid_pos)
-	for target in targets:
-		var distance: int = battle_controller.get_distance(unit.grid_pos, target.grid_pos)
-		if distance < best_distance:
-			best_distance = distance
-			primary_target = target
+	var primary_target: Node = _select_primary_target(unit, targets, battle_controller)
 	var path: Array[Vector2i] = battle_controller.pathfinding.find_path(unit.grid_pos, primary_target.grid_pos, battle_controller.tile_map)
 	if path.size() <= 1:
 		return unit.grid_pos
@@ -125,13 +184,43 @@ func _find_move_target(unit: Node, battle_controller: Node) -> Vector2i:
 	var candidates: Array[Vector2i] = battle_controller.get_walkable_tiles_for(unit)
 	if candidates.is_empty():
 		return unit.grid_pos
-	var best_score: int = best_distance
+	var best_score: int = battle_controller.get_distance(unit.grid_pos, primary_target.grid_pos) * 2
+	var best_candidate: Vector2i = unit.grid_pos
 	for tile in candidates:
-		var distance: int = battle_controller.get_distance(tile, primary_target.grid_pos)
-		if distance < best_score:
-			best_score = distance
-			best_tile = tile
-	return best_tile
+		var in_range_after_move: Array = _enemies_in_range_from(unit, tile, battle_controller)
+		var tile_score: int = 0
+		if not in_range_after_move.is_empty():
+			tile_score += SCORE_MOVE_TO_ATTACK * in_range_after_move.size()
+		var dist: int = battle_controller.get_distance(tile, primary_target.grid_pos)
+		tile_score += max(0, 30 - dist)
+		if tile_score > best_score:
+			best_score = tile_score
+			best_candidate = tile
+	return best_candidate
+
+func _enemies_in_range_from(unit: Node, from_pos: Vector2i, battle_controller: Node) -> Array:
+	var result: Array = []
+	var weapon_data: Dictionary = DataManager.get_weapon(unit.runtime_state.equipped_weapon)
+	if weapon_data.is_empty():
+		return result
+	var min_range: int = weapon_data.get("min_range", 1)
+	var max_range: int = weapon_data.get("max_range", 1)
+	var attack_tiles: Array[Vector2i] = battle_controller.pathfinding.get_attack_range(from_pos, min_range, max_range, battle_controller.tile_map)
+	for tile in attack_tiles:
+		var enemy = battle_controller.get_unit_at(tile)
+		if enemy and enemy.team != unit.team and enemy.is_alive():
+			result.append(enemy)
+	return result
+
+func _select_primary_target(unit: Node, targets: Array, battle_controller: Node) -> Node:
+	var best_target: Node = targets[0]
+	var best_score := -999
+	for target in targets:
+		var score := _evaluate_attack(unit, target)
+		if score > best_score:
+			best_score = score
+			best_target = target
+	return best_target
 
 func _get_battle_controller(unit: Node) -> Node:
 	if not unit:

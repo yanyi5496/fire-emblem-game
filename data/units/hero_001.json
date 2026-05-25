@@ -28,5 +28,5 @@
     "luk": 40
   },
   "inventory": ["iron_sword"],
-  "skills": ["sword_adept"]
+  "skills": ["sword_adept", "flame_burst"]
 }
