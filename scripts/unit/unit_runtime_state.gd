@@ -139,8 +139,8 @@ func _roll_stats() -> Dictionary:
 
 func _apply_stat_growth(stat_name: String, amount: int) -> void:
 	match stat_name:
-		"hp": max_hp += amount; current_hp = min(current_hp + amount, max_hp)
-		"mp": max_mp += amount; current_mp = min(current_mp + amount, max_mp)
+		"hp": max_hp = min(999, max_hp + amount); current_hp = min(current_hp + amount, max_hp)
+		"mp": max_mp = min(999, max_mp + amount); current_mp = min(current_mp + amount, max_mp)
 		"str": str_stat = min(30, str_stat + amount)
 		"mag": mag_stat = min(30, mag_stat + amount)
 		"skl": skl_stat = min(30, skl_stat + amount)
