@@ -80,7 +80,6 @@ func _build_save_data(runtime_snapshot: Dictionary = {}) -> Dictionary:
 		state_data[key] = runtime_snapshot[key]
 	state_data["version"] = SAVE_VERSION
 	state_data["timestamp"] = Time.get_unix_time_from_system()
-	state_data["settings"] = {}
 	return state_data
 
 func _get_save_path(slot: int) -> String:

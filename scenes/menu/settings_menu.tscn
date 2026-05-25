@@ -15,7 +15,34 @@ text = "设置"
 [node name="MasterVolumeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 text = "主音量"
 
+[node name="MasterVolumeSlider" type="HSlider" parent="MarginContainer/VBoxContainer"]
+min = 0
+max = 100
+value = 80
+
+[node name="BgmVolumeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+text = "BGM 音量"
+
+[node name="BgmVolumeSlider" type="HSlider" parent="MarginContainer/VBoxContainer"]
+min = 0
+max = 100
+value = 70
+
+[node name="SfxVolumeLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+text = "SFX 音量"
+
+[node name="SfxVolumeSlider" type="HSlider" parent="MarginContainer/VBoxContainer"]
+min = 0
+max = 100
+value = 85
+
+[node name="FullscreenCheckBox" type="CheckBox" parent="MarginContainer/VBoxContainer"]
+text = "全屏"
+
 [node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer"]
 text = "返回"
 
+[connection signal="drag_ended" from="MarginContainer/VBoxContainer/MasterVolumeSlider" to="." method="_on_master_volume_slider_drag_ended"]
+[connection signal="drag_ended" from="MarginContainer/VBoxContainer/BgmVolumeSlider" to="." method="_on_bgm_volume_slider_drag_ended"]
+[connection signal="drag_ended" from="MarginContainer/VBoxContainer/SfxVolumeSlider" to="." method="_on_sfx_volume_slider_drag_ended"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BackButton" to="." method="_on_back_pressed"]

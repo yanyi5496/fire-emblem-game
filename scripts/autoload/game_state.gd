@@ -30,6 +30,7 @@ var latest_battle_result: String = ""
 var latest_battle_map_id: String = ""
 var latest_battle_turns: int = 0
 var resume_scene: String = "main_menu"
+var settings: Dictionary = {}
 
 func begin_battle(map_id: String, starting_turn: int = 1) -> void:
 	current_map_id = map_id
@@ -111,6 +112,7 @@ func to_dict() -> Dictionary:
 		"latest_battle_result": latest_battle_result,
 		"latest_battle_map_id": latest_battle_map_id,
 		"latest_battle_turns": latest_battle_turns,
+		"settings": settings.duplicate(),
 	}
 
 func from_dict(data: Dictionary) -> void:
@@ -127,6 +129,7 @@ func from_dict(data: Dictionary) -> void:
 	latest_battle_result = str(data.get("latest_battle_result", ""))
 	latest_battle_map_id = str(data.get("latest_battle_map_id", ""))
 	latest_battle_turns = int(data.get("latest_battle_turns", 0))
+	settings = data.get("settings", {}).duplicate()
 
 func is_valid_transition(from: GamePhase, to: GamePhase) -> bool:
 	var allowed: Dictionary = {
@@ -161,4 +164,5 @@ func reset() -> void:
 	latest_battle_map_id = ""
 	latest_battle_turns = 0
 	resume_scene = "main_menu"
+	settings.clear()
 	set_phase(GamePhase.NONE)

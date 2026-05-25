@@ -45,8 +45,13 @@ var battle_lifecycle = null
 var map_data: Dictionary = {}
 var _battle_started_once := false
 
+const _hit_effect := preload("res://scenes/battle/effects/hit_effect.tscn")
+const _crit_effect := preload("res://scenes/battle/effects/crit_effect.tscn")
+const _skill_effect := preload("res://scenes/battle/effects/skill_effect.tscn")
+
 func _ready() -> void:
 	combat_manager = _combat_dep.new()
+	combat_manager.combat_finished.connect(_on_combat_finished)
 	battle_query = _query_dep.new()
 	victory_judge = _victory_dep.new()
 	skill_service = _skill_dep.new()
@@ -362,6 +367,20 @@ func _on_attack_confirmed() -> void:
 	_process_level_ups()
 	_check_battle_end()
 
+func _on_combat_finished(result: Dictionary) -> void:
+	var attacker_id: String = result.get("attacker_id", "")
+	var defender_id: String = result.get("defender_id", "")
+	var attacker: Node = _find_unit_by_id(attacker_id)
+	var defender: Node = _find_unit_by_id(defender_id)
+	if attacker and defender:
+		_play_combat_effects(attacker, defender, result)
+
+func _find_unit_by_id(unit_id: String) -> Node:
+	for unit in units_container.get_children():
+		if unit.unit_id == unit_id:
+			return unit
+	return null
+
 func _on_attack_cancelled() -> void:
 	interaction_state = BattleInteractionState.TARGETING
 	if battle_hud and battle_hud.has_method("hide_attack_preview"):
@@ -478,6 +497,26 @@ func has_battle_ended() -> bool:
 
 func get_battle_result() -> String:
 	return check_victory_condition()
+
+func _play_combat_effects(attacker: Node, defender: Node, result: Dictionary) -> void:
+	attacker.play_animation("attack")
+	if result.get("did_crit", false):
+		_spawn_effect(_crit_effect, defender.global_position)
+	elif result.get("did_hit", false):
+		_spawn_effect(_hit_effect, defender.global_position)
+	if not defender.is_alive():
+		defender.play_animation("death")
+	var counter_result := result.get("did_counter", false)
+	if counter_result:
+		defender.play_animation("attack")
+		_spawn_effect(_hit_effect, attacker.global_position)
+
+func _spawn_effect(effect_scene: PackedScene, pos: Vector2) -> void:
+	var instance := effect_scene.instantiate()
+	instance.global_position = pos
+	units_container.add_child(instance)
+	if instance.has_method("play"):
+		instance.play()
 
 func _distribute_combat_exp(attacker: Node, defender: Node) -> void:
 	if not attacker.runtime_state or not defender.runtime_state:

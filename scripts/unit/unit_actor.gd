@@ -21,6 +21,10 @@ var _is_alive: bool = true
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 
+func play_animation(anim_name: String) -> void:
+	if animation_player and animation_player.has_animation(anim_name):
+		animation_player.play(anim_name)
+
 func is_alive() -> bool:
 	return _is_alive and runtime_state != null and runtime_state.action_state != _urs_dep.ActionState.DEAD
 
