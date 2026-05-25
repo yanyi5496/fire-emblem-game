@@ -116,8 +116,8 @@ func get_growth_rates() -> Dictionary:
 func gain_exp(amount: int) -> Array[Dictionary]:
 	exp += amount
 	var levels: Array[Dictionary] = []
-	while exp >= 100:
-		exp -= 100
+	while exp >= 80:
+		exp -= 80
 		level += 1
 		var gained: Dictionary = _roll_stats()
 		levels.append(gained)
