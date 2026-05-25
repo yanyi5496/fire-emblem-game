@@ -24,11 +24,29 @@ var _lines: Array[Dictionary] = []
 var _current_index: int = 0
 var _current_character: String = ""
 var _is_narrator_mode := true
+var _cg_overlay: TextureRect = null
+var _effect_overlay: ColorRect = null
+var _waiting_for_cg := false
 
 func _ready() -> void:
 	hide()
 	dialogue_box.hide()
 	choice_container.hide()
+	_cg_overlay = TextureRect.new()
+	_cg_overlay.name = "CGOverlay"
+	_cg_overlay.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_cg_overlay.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cg_overlay.anchors_preset = Control.PRESET_FULL_RECT
+	_cg_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_cg_overlay.gui_input.connect(_on_cg_gui_input)
+	_cg_overlay.hide()
+	add_child(_cg_overlay)
+	_effect_overlay = ColorRect.new()
+	_effect_overlay.name = "EffectOverlay"
+	_effect_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_effect_overlay.anchors_preset = Control.PRESET_FULL_RECT
+	_effect_overlay.hide()
+	add_child(_effect_overlay)
 	if not InputManager.confirm_pressed.is_connected(_on_confirm_pressed):
 		InputManager.confirm_pressed.connect(_on_confirm_pressed)
 	if not dialogue_box.gui_input.is_connected(_on_dialogue_box_gui_input):
@@ -85,6 +103,16 @@ func _advance() -> void:
 				_skip_to_next_marker()
 			else:
 				_advance()
+		_story_parser_dep.LineType.CG:
+			var cg_id: String = line.get("cg_id", "")
+			if cg_id != "":
+				_show_cg(cg_id)
+		_story_parser_dep.LineType.EFFECT:
+			var effect_id: String = line.get("effect_id", "")
+			if effect_id != "":
+				_play_effect(effect_id)
+			else:
+				_advance()
 		_story_parser_dep.LineType.CHOICE:
 			_show_choices()
 		_:
@@ -97,6 +125,44 @@ func _skip_to_next_marker() -> void:
 			break
 		_current_index += 1
 	_advance()
+
+func _show_cg(cg_id: String) -> void:
+	var cg_path := "res://assets/cg/%s.png" % cg_id
+	var tex := load(cg_path) as Texture2D
+	if tex:
+		_cg_overlay.texture = tex
+		_cg_overlay.show()
+		_waiting_for_cg = true
+		dialogue_box.hide()
+	else:
+		push_warning("CG not found: %s" % cg_path)
+		_advance()
+
+func _close_cg() -> void:
+	_cg_overlay.hide()
+	_cg_overlay.texture = null
+	_waiting_for_cg = false
+	_advance()
+
+func _play_effect(effect_id: String) -> void:
+	match effect_id:
+		"fade_out":
+			_effect_overlay.color = Color.BLACK
+			_effect_overlay.modulate.a = 0.0
+			_effect_overlay.show()
+			var tween := create_tween()
+			tween.tween_property(_effect_overlay, "modulate:a", 1.0, 0.5)
+			tween.tween_callback(_advance)
+		"fade_in":
+			_effect_overlay.color = Color.BLACK
+			_effect_overlay.modulate.a = 1.0
+			_effect_overlay.show()
+			var tween := create_tween()
+			tween.tween_property(_effect_overlay, "modulate:a", 0.0, 0.5)
+			tween.tween_callback(_effect_overlay.hide)
+			tween.tween_callback(_advance)
+		_:
+			_advance()
 
 func _show_narrator() -> void:
 	_is_narrator_mode = true
@@ -150,9 +216,20 @@ func _on_choice_selected(index: int) -> void:
 func _on_confirm_pressed() -> void:
 	if GameState.current_phase != GameState.GamePhase.STORY:
 		return
+	if _waiting_for_cg:
+		_close_cg()
+		return
 	if choice_container.visible:
 		return
 	_advance()
+
+func _on_cg_gui_input(event: InputEvent) -> void:
+	if GameState.current_phase != GameState.GamePhase.STORY:
+		return
+	if not _waiting_for_cg:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_close_cg()
 
 func _on_dialogue_box_gui_input(event: InputEvent) -> void:
 	if GameState.current_phase != GameState.GamePhase.STORY:
@@ -200,6 +277,9 @@ func _finish() -> void:
 	for child in choice_container.get_children():
 		child.queue_free()
 	dialogue_box.hide()
+	_cg_overlay.hide()
+	_effect_overlay.hide()
+	_waiting_for_cg = false
 	hide()
 	choice_container.hide()
 	GameState.set_phase(GameState.GamePhase.NONE)
