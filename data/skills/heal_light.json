@@ -2,7 +2,6 @@
   "id": "heal_light",
   "name": "治愈之光",
   "type": "active",
-  "trigger": "before_combat",
   "cost": {
     "mp": 4
   },

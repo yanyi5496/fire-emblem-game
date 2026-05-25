@@ -2,7 +2,6 @@
   "id": "power_strike",
   "name": "力量迸发",
   "type": "active",
-  "trigger": "before_combat",
   "cost": {
     "mp": 3
   },

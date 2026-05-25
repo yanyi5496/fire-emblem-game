@@ -2,7 +2,6 @@
   "id": "flame_burst",
   "name": "火焰爆裂",
   "type": "active",
-  "trigger": "before_combat",
   "cost": {
     "mp": 6
   },

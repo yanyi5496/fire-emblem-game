@@ -26,7 +26,7 @@ func run() -> Dictionary:
 					details.append("unit %s.stats missing: %s" % [uid, s])
 					all_pass = false
 
-	var weapon_ids := ["iron_sword", "iron_axe", "heal_staff"]
+	var weapon_ids := ["iron_sword", "iron_axe", "heal_staff", "iron_lance", "iron_bow", "fire_magic"]
 	var weapon_fields := ["id", "type", "might", "hit", "weight", "min_range", "max_range", "durability"]
 	for wid in weapon_ids:
 		var w = DataManager.get_weapon(wid)
@@ -57,8 +57,11 @@ func run() -> Dictionary:
 			details.append("MISSING skill: %s" % sid)
 			all_pass = false
 			continue
-		if not s.has("type") or not s.has("trigger") or not s.has("effect"):
-			details.append("skill %s missing type/trigger/effect" % sid)
+		if not s.has("type") or not s.has("effect"):
+			details.append("skill %s missing type or effect" % sid)
+			all_pass = false
+		if s.get("type", "") == "passive" and not s.has("trigger"):
+			details.append("passive skill %s missing trigger" % sid)
 			all_pass = false
 
 	var map_ids := ["mvp_map_01", "mvp_map_02_defend"]
