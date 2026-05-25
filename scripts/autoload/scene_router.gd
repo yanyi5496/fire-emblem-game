@@ -8,14 +8,41 @@ enum TransitionType {
 signal before_scene_change(from_scene: String, to_scene: String)
 signal after_scene_change(to_scene: String)
 
+var _fade_overlay: ColorRect = null
+
+func _ready() -> void:
+	var canvas := CanvasLayer.new()
+	canvas.name = "TransitionLayer"
+	add_child(canvas)
+	_fade_overlay = ColorRect.new()
+	_fade_overlay.name = "FadeOverlay"
+	_fade_overlay.color = Color.BLACK
+	_fade_overlay.modulate.a = 0.0
+	_fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_overlay.anchors_preset = Control.PRESET_FULL_RECT
+	canvas.add_child(_fade_overlay)
+
 func goto(scene_key: String, params: Dictionary = {}) -> void:
 	before_scene_change.emit("", scene_key)
 	var scene_path := _get_scene_path(scene_key)
-	var result := get_tree().change_scene_to_file(scene_path)
-	if result != OK:
-		push_error("Failed to load scene: %s" % scene_path)
-		return
+	_do_fade_transition(scene_path)
 	after_scene_change.emit(scene_key)
+
+func _do_fade_transition(scene_path: String) -> void:
+	if not _fade_overlay:
+		get_tree().change_scene_to_file(scene_path)
+		return
+	var tween := create_tween()
+	_fade_overlay.modulate.a = 0.0
+	tween.tween_property(_fade_overlay, "modulate:a", 1.0, 0.3)
+	tween.tween_callback(func():
+		get_tree().change_scene_to_file(scene_path)
+		_fade_out()
+	)
+
+func _fade_out() -> void:
+	var tween := create_tween()
+	tween.tween_property(_fade_overlay, "modulate:a", 0.0, 0.3)
 
 
 

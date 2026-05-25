@@ -9,8 +9,9 @@ signal save_pressed()
 
 @onready var turn_label: Label = $TurnLabel
 @onready var unit_info: Panel = $UnitInfoPanel
-@onready var unit_name_label: Label = $UnitInfoPanel/UnitNameLabel
-@onready var hp_label: Label = $UnitInfoPanel/HPLabel
+@onready var unit_name_label: Label = $UnitInfoPanel/VBoxContainer/UnitNameLabel
+@onready var hp_label: Label = $UnitInfoPanel/VBoxContainer/HPLabel
+@onready var details_label: Label = $UnitInfoPanel/VBoxContainer/DetailsLabel
 @onready var action_menu: Panel = $ActionMenu
 @onready var attack_preview: Panel = $AttackPreview
 
@@ -22,9 +23,36 @@ func show_unit_info(unit) -> void:
 		hide_unit_info()
 		return
 	unit_info.show()
-	unit_name_label.text = unit.runtime_state.unit_name
+	unit_name_label.text = "%s Lv%d" % [unit.runtime_state.unit_name, unit.runtime_state.level]
 	var s: Dictionary = unit.runtime_state.get_stats()
-	hp_label.text = "HP %d/%d" % [s.get("hp", 0), s.get("max_hp", 0)]
+	hp_label.text = "HP %d/%d  MP %d/%d" % [s.get("hp", 0), s.get("max_hp", 0), s.get("mp", 0), s.get("max_mp", 0)]
+	var weapon_name := "无"
+	var wp_id: String = unit.runtime_state.equipped_weapon
+	if wp_id != "":
+		var wp: Dictionary = DataManager.get_weapon(wp_id)
+		var dur: int = unit.runtime_state.get_weapon_durability(wp_id)
+		weapon_name = "%s(%d)" % [wp.get("name", wp_id), dur]
+	var status_text: String = _status_text(unit.runtime_state.status_effects)
+	details_label.text = "STR %d  MAG %d\nSKL %d  SPD %d\nDEF %d  RES %d\n武器: %s%s" % [
+		s.get("str", 0), s.get("mag", 0),
+		s.get("skl", 0), s.get("spd", 0),
+		s.get("def", 0), s.get("res", 0),
+		weapon_name,
+		"\n" + status_text if status_text != "" else "",
+	]
+
+func _status_text(effects: Array[Dictionary]) -> String:
+	var parts: Array[String] = []
+	for e in effects:
+		var eid: String = str(e.get("id", ""))
+		if eid.begins_with("stat_buff_"):
+			continue
+		match eid:
+			"poison": parts.append("中毒")
+			"sleep": parts.append("睡眠")
+			"paralysis": parts.append("麻痹")
+			"silence": parts.append("沉默")
+	return " ".join(parts)
 
 func hide_unit_info() -> void:
 	unit_info.hide()

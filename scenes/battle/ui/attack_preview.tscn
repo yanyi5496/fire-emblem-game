@@ -19,6 +19,9 @@ text = "命中 0%"
 [node name="DamageLabel" type="Label" parent="VBoxContainer"]
 text = "伤害 0"
 
+[node name="CritLabel" type="Label" parent="VBoxContainer"]
+text = "暴击 0%"
+
 [node name="CounterLabel" type="Label" parent="VBoxContainer"]
 text = "反击: 命中 0%  伤害 0"
 

@@ -41,6 +41,7 @@ func run() -> Dictionary:
 		],
 		"res://scenes/battle/ui/battle_hud.tscn": [
 			"TurnLabel",
+			"SaveButton",
 			"UnitInfoPanel",
 			"ActionMenu",
 			"AttackPreview",
@@ -54,6 +55,11 @@ func run() -> Dictionary:
 		"res://scenes/battle/ui/attack_preview.tscn": [
 			"VBoxContainer/AttackerLabel",
 			"VBoxContainer/DefenderLabel",
+			"VBoxContainer/HitRateLabel",
+			"VBoxContainer/DamageLabel",
+			"VBoxContainer/CritLabel",
+			"VBoxContainer/CounterLabel",
+			"VBoxContainer/FollowUpLabel",
 			"VBoxContainer/Buttons/ConfirmButton",
 			"VBoxContainer/Buttons/CancelButton",
 		],
