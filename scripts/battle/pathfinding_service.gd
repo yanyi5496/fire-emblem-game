@@ -85,13 +85,8 @@ func _get_move_cost(pos: Vector2i, tile_map: TileMap) -> int:
 	return int(terrain_data.get("move_cost", 1))
 
 func _get_runtime_terrain_data(tile_map: TileMap, pos: Vector2i) -> Dictionary:
-	if not tile_map:
-		return {}
-	var tree := tile_map.get_tree()
-	if not tree or not tree.current_scene:
-		return {}
-	var scene := tree.current_scene
-	if scene.has_method("get_terrain_data_at"):
+	var scene = _get_battle_controller(tile_map)
+	if scene and scene.has_method("get_terrain_data_at"):
 		return scene.get_terrain_data_at(pos)
 	return {}
 
@@ -105,15 +100,15 @@ func _can_step_on(tile_map: TileMap, pos: Vector2i, destination: Vector2i) -> bo
 	return unit == null
 
 func _get_runtime_unit_at(tile_map: TileMap, pos: Vector2i):
-	if not tile_map:
-		return null
-	var tree := tile_map.get_tree()
-	if not tree or not tree.current_scene:
-		return null
-	var scene := tree.current_scene
-	if scene.has_method("get_unit_at"):
+	var scene = _get_battle_controller(tile_map)
+	if scene and scene.has_method("get_unit_at"):
 		return scene.get_unit_at(pos)
 	return null
+
+func _get_battle_controller(tile_map: TileMap):
+	if not tile_map or not tile_map.is_inside_tree():
+		return null
+	return tile_map.get_tree().current_scene
 
 func _pop_lowest_cost(frontier: Array[Dictionary]) -> int:
 	var best_index := 0

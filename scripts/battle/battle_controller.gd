@@ -23,6 +23,8 @@ var attack_targets: Array = []
 var pending_target = null
 var pending_combat_result: Dictionary = {}
 var pending_skill_id: String = ""
+var _available_skills: Array[String] = []
+var _current_skill_index: int = 0
 var battle_hud: Node = null
 
 @onready var turn_manager = $TurnManager
@@ -246,7 +248,7 @@ func _on_action_move() -> void:
 
 func _on_action_attack() -> void:
 	interaction_state = BattleInteractionState.TARGETING
-	attack_targets = _get_enemies_in_range(selected_unit)
+	attack_targets = get_enemies_in_range(selected_unit)
 	var tiles: Array[Vector2i] = []
 	for target in attack_targets:
 		tiles.append(target.grid_pos)
@@ -255,34 +257,43 @@ func _on_action_attack() -> void:
 func _on_action_skill() -> void:
 	if not selected_unit:
 		return
+	_available_skills.clear()
 	for skill_id in selected_unit.runtime_state.skills:
 		var skill_data: Dictionary = DataManager.get_skill(skill_id)
 		if skill_data.get("type", "") != "active":
 			continue
 		if not selected_unit.runtime_state.can_use_skill(skill_id):
 			continue
-		pending_skill_id = skill_id
-		var effect_type: String = skill_data.get("effect", {}).get("type", "")
-		match effect_type:
-			"heal":
-				interaction_state = BattleInteractionState.SKILL_TARGETING
-				var targets := _get_skill_range_targets(selected_unit, skill_id, "ally")
-				var tiles: Array[Vector2i] = []
-				for t in targets:
-					tiles.append(t.grid_pos)
-				_highlight_tiles(tiles)
-				return
-			"damage":
-				interaction_state = BattleInteractionState.SKILL_TARGETING
-				var targets := _get_skill_range_targets(selected_unit, skill_id, "enemy")
-				var tiles: Array[Vector2i] = []
-				for t in targets:
-					tiles.append(t.grid_pos)
-				_highlight_tiles(tiles)
-				return
-			"stat_bonus":
-				_execute_skill_on_self(selected_unit, skill_id)
-				return
+		_available_skills.append(skill_id)
+	if _available_skills.is_empty():
+		return
+	_current_skill_index = 0
+	_activate_skill(_available_skills[0])
+
+func _activate_skill(skill_id: String) -> void:
+	pending_skill_id = skill_id
+	var skill_data: Dictionary = DataManager.get_skill(skill_id)
+	var effect_type: String = skill_data.get("effect", {}).get("type", "")
+	match effect_type:
+		"heal":
+			interaction_state = BattleInteractionState.SKILL_TARGETING
+			var targets := get_skill_range_targets(selected_unit, skill_id, "ally")
+			var tiles: Array[Vector2i] = []
+			for t in targets:
+				tiles.append(t.grid_pos)
+			_highlight_tiles(tiles)
+			return
+		"damage":
+			interaction_state = BattleInteractionState.SKILL_TARGETING
+			var targets := get_skill_range_targets(selected_unit, skill_id, "enemy")
+			var tiles: Array[Vector2i] = []
+			for t in targets:
+				tiles.append(t.grid_pos)
+			_highlight_tiles(tiles)
+			return
+		"stat_bonus":
+			_execute_skill_on_self(selected_unit, skill_id)
+			return
 
 func _on_action_wait() -> void:
 	selected_unit.wait()
@@ -320,7 +331,7 @@ func _execute_action_complete() -> void:
 	if battle_hud and battle_hud.has_method("hide_action_menu"):
 		battle_hud.hide_action_menu()
 
-func _get_enemies_in_range(unit) -> Array:
+func get_enemies_in_range(unit) -> Array:
 	var result: Array = []
 	var weapon_data: Dictionary = DataManager.get_weapon(unit.runtime_state.equipped_weapon)
 	if weapon_data.is_empty():
@@ -337,16 +348,16 @@ func _get_enemies_in_range(unit) -> Array:
 func on_unit_clicked(unit: Node) -> void:
 	unit_selected.emit(unit)
 
-func _get_skill_range(unit, skill_id: String) -> Vector2i:
+func get_skill_range(unit, skill_id: String) -> Vector2i:
 	var skill_data: Dictionary = DataManager.get_skill(skill_id)
 	if skill_data.has("range"):
 		return Vector2i(int(skill_data["range"].get("min", 1)), int(skill_data["range"].get("max", 1)))
 	var weapon_data: Dictionary = DataManager.get_weapon(unit.runtime_state.equipped_weapon)
 	return Vector2i(int(weapon_data.get("min_range", 1)), int(weapon_data.get("max_range", 1)))
 
-func _get_skill_range_targets(unit, skill_id: String, target_group: String) -> Array:
+func get_skill_range_targets(unit, skill_id: String, target_group: String) -> Array:
 	var result: Array = []
-	var skill_range: Vector2i = _get_skill_range(unit, skill_id)
+	var skill_range: Vector2i = get_skill_range(unit, skill_id)
 	var tiles: Array[Vector2i] = pathfinding.get_attack_range(unit.grid_pos, skill_range.x, skill_range.y, tile_map)
 	var skill_data: Dictionary = DataManager.get_skill(skill_id)
 	var effect_type: String = skill_data.get("effect", {}).get("type", "")
@@ -419,13 +430,31 @@ func _cancel_skill_targeting() -> void:
 
 func _execute_skill_on_self(unit, skill_id: String) -> void:
 	var skill_data: Dictionary = DataManager.get_skill(skill_id)
-	if skill_data.get("effect", {}).get("type", "") == "stat_bonus":
-		_clear_highlights()
-		pending_skill_id = ""
-		unit.wait()
-		_check_battle_end()
-		if battle_hud and battle_hud.has_method("hide_action_menu"):
-			battle_hud.hide_action_menu()
+	var effect: Dictionary = skill_data.get("effect", {})
+	var effect_type: String = effect.get("type", "")
+	if effect_type == "stat_bonus":
+		var stat_name: String = effect.get("stat", "")
+		var bonus: int = int(effect.get("value", 0))
+		var duration: int = int(effect.get("duration", 1))
+		match stat_name:
+			"str": unit.runtime_state.str_stat += bonus
+			"mag": unit.runtime_state.mag_stat += bonus
+			"def": unit.runtime_state.def_stat += bonus
+			"res": unit.runtime_state.res_stat += bonus
+			"spd": unit.runtime_state.spd_stat += bonus
+			"skl": unit.runtime_state.skl_stat += bonus
+			"luk": unit.runtime_state.luk_stat += bonus
+		var buff_effect: Dictionary = {"id": "stat_buff_%s" % stat_name, "duration": duration, "stat": stat_name, "value": bonus}
+		unit.runtime_state.status_effects.append(buff_effect)
+		unit.runtime_state.trigger_skill_cooldown(skill_id)
+		if battle_hud and battle_hud.has_method("show_status_message"):
+			battle_hud.show_status_message("%s 使用了 %s" % [unit.unit_id, skill_data.get("name", skill_id)])
+	_clear_highlights()
+	pending_skill_id = ""
+	unit.wait()
+	_check_battle_end()
+	if battle_hud and battle_hud.has_method("hide_action_menu"):
+		battle_hud.hide_action_menu()
 
 func get_unit_at(pos: Vector2i):
 	for unit in units_container.get_children():

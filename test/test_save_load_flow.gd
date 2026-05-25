@@ -14,7 +14,7 @@ func run() -> Dictionary:
 	GameState.inventory = ["iron_sword", "heal_staff"]
 	GameState.story_flags = {"intro_done": true}
 	GameState.completed_maps = ["mvp_map_00"]
-	GameState.resume_scene = "result"
+	GameState.set_resume_scene("result")
 	GameState.latest_battle_result = "victory"
 	GameState.latest_battle_map_id = "mvp_map_01"
 	GameState.latest_battle_turns = 3

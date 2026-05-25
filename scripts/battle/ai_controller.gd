@@ -14,6 +14,13 @@ const SCORE_HEAL := 40
 const SCORE_NEAREST := 10
 const SCORE_MOVE_TO_ATTACK := 5
 
+var _combat_manager = null
+
+func _get_combat_manager():
+	if _combat_manager == null:
+		_combat_manager = _combat_dep.new()
+	return _combat_manager
+
 func execute_turn(units: Array[Node]) -> void:
 	for unit in units:
 		if not unit.is_alive():
@@ -30,7 +37,7 @@ func _decide_action(unit: Node) -> Dictionary:
 
 	var best_action := { "type": "wait", "score": -999 }
 
-	var in_range_targets: Array = battle_controller._get_enemies_in_range(unit)
+	var in_range_targets: Array = battle_controller.get_enemies_in_range(unit)
 	for target in in_range_targets:
 		var score := _evaluate_attack(unit, target)
 		if score > best_action.get("score", -999):
@@ -54,7 +61,7 @@ func _decide_action(unit: Node) -> Dictionary:
 
 func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var score := 0
-	var combat = _combat_dep.new()
+	var combat = _get_combat_manager()
 	var weapon_id: String = attacker.runtime_state.equipped_weapon
 	if weapon_id == "":
 		return -999
@@ -80,7 +87,7 @@ func _evaluate_heal(unit: Node):
 		if not unit.runtime_state.can_use_skill(skill_id):
 			continue
 		if skill_data.get("effect", {}).get("type", "") == "heal":
-			var allies: Array = battle_controller._get_skill_range_targets(unit, skill_id, "ally")
+			var allies: Array = battle_controller.get_skill_range_targets(unit, skill_id, "ally")
 			if allies.is_empty():
 				return null
 			var best_ally = allies[0]
@@ -112,7 +119,7 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 			var weapon_id: String = unit.runtime_state.equipped_weapon
 			if target and weapon_id != "":
 				unit.attack(target)
-				_combat_dep.new().execute(unit, target, weapon_id)
+				_get_combat_manager().execute(unit, target, weapon_id)
 			else:
 				unit.wait()
 		"move":
@@ -149,7 +156,7 @@ func _execute_skill_heal(unit: Node, target: Node, battle_controller: Node) -> v
 	unit.wait()
 
 func _best_attack_action(unit: Node, battle_controller: Node) -> Dictionary:
-	var in_range_targets: Array = battle_controller._get_enemies_in_range(unit)
+	var in_range_targets: Array = battle_controller.get_enemies_in_range(unit)
 	var best_action := { "type": "wait", "score": -999 }
 	for target in in_range_targets:
 		var score := _evaluate_attack(unit, target)

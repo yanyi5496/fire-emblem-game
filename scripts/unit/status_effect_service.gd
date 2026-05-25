@@ -39,7 +39,24 @@ func tick_effect_durations(unit) -> void:
 		if dur > 0:
 			effect["duration"] = dur
 			updated.append(effect)
+		else:
+			_revert_expired_buff(unit, effect)
 	unit.runtime_state.status_effects = updated
+
+func _revert_expired_buff(unit, effect: Dictionary) -> void:
+	var effect_id: String = effect.get("id", "")
+	if not effect_id.begins_with("stat_buff_"):
+		return
+	var stat_name: String = effect.get("stat", "")
+	var value: int = int(effect.get("value", 0))
+	match stat_name:
+		"str": unit.runtime_state.str_stat = max(0, unit.runtime_state.str_stat - value)
+		"mag": unit.runtime_state.mag_stat = max(0, unit.runtime_state.mag_stat - value)
+		"def": unit.runtime_state.def_stat = max(0, unit.runtime_state.def_stat - value)
+		"res": unit.runtime_state.res_stat = max(0, unit.runtime_state.res_stat - value)
+		"spd": unit.runtime_state.spd_stat = max(0, unit.runtime_state.spd_stat - value)
+		"skl": unit.runtime_state.skl_stat = max(0, unit.runtime_state.skl_stat - value)
+		"luk": unit.runtime_state.luk_stat = max(0, unit.runtime_state.luk_stat - value)
 
 func has_effect(unit, effect_type: String) -> bool:
 	if not unit.runtime_state:

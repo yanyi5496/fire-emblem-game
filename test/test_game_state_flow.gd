@@ -15,7 +15,7 @@ func run() -> Dictionary:
 	GameState.battle_map_state = {"map_id": "mvp_map_01", "turn": 3}
 	GameState.story_flags = {"intro_done": true}
 	GameState.completed_maps = ["mvp_map_00"]
-	GameState.resume_scene = "battle"
+	GameState.set_resume_scene("battle")
 	GameState.latest_battle_result = "defeat"
 	GameState.latest_battle_map_id = "mvp_map_01"
 	GameState.latest_battle_turns = 3
@@ -63,7 +63,7 @@ func run() -> Dictionary:
 
 	GameState.battle_units = [{"unit_id": "hero_001", "x": 1, "y": 1, "current_hp": 18, "action_state": 2}]
 	GameState.battle_map_state = {"map_id": "mvp_map_01", "turn": 5}
-	GameState.resume_scene = "battle"
+	GameState.set_resume_scene("battle")
 	GameState.latest_battle_result = "defeat"
 	GameState.latest_battle_map_id = "mvp_map_01"
 	GameState.latest_battle_turns = 5
