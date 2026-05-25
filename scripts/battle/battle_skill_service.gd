@@ -78,6 +78,15 @@ func get_passive_skills(unit, trigger_type: String) -> Array[String]:
 		var data: Dictionary = DataManager.get_skill(skill_id)
 		if data.get("type", "") == "passive" and str(data.get("trigger", "")) == trigger_type:
 			result.append(skill_id)
+	result.sort_custom(func(a: String, b: String):
+		var da := DataManager.get_skill(a)
+		var db := DataManager.get_skill(b)
+		var pa := int(da.get("priority", 0))
+		var pb := int(db.get("priority", 0))
+		if pa != pb:
+			return pa > pb
+		return a < b
+	)
 	return result
 
 func apply_passive_skill(unit, skill_id: String) -> Dictionary:
@@ -226,13 +235,21 @@ func _execute_stat_bonus(unit, target, skill_id: String, skill_data: Dictionary,
 		"luk": target.runtime_state.luk_stat += bonus
 		_:
 			return {"success": false, "message": ""}
-	var buff_effect: Dictionary = {
-		"id": "stat_buff_%s" % stat_name,
-		"duration": duration,
-		"stat": stat_name,
-		"value": bonus,
-	}
-	target.runtime_state.status_effects.append(buff_effect)
+	var buff_id := "stat_buff_%s" % stat_name
+	var existing := false
+	for i in range(target.runtime_state.status_effects.size()):
+		if str(target.runtime_state.status_effects[i].get("id", "")) == buff_id:
+			target.runtime_state.status_effects[i]["duration"] = duration
+			existing = true
+			break
+	if not existing:
+		var buff_effect: Dictionary = {
+			"id": buff_id,
+			"duration": duration,
+			"stat": stat_name,
+			"value": bonus,
+		}
+		target.runtime_state.status_effects.append(buff_effect)
 	unit.runtime_state.trigger_skill_cooldown(skill_id)
 	unit.wait()
 	return {

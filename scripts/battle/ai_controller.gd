@@ -29,8 +29,19 @@ func execute_turn(units: Array[Node]) -> void:
 			continue
 		if unit.runtime_state.action_state != _urs_dep.ActionState.IDLE:
 			continue
+		if _is_disabled(unit):
+			continue
 		var action := _decide_action(unit)
 		_execute_action(unit, action)
+
+func _is_disabled(unit: Node) -> bool:
+	if not unit.runtime_state:
+		return true
+	for e in unit.runtime_state.status_effects:
+		var eid: String = str(e.get("id", ""))
+		if eid in ["sleep", "paralysis"] and e.get("duration", 0) > 0:
+			return true
+	return false
 
 func _decide_action(unit: Node) -> Dictionary:
 	var battle_controller := _get_battle_controller(unit)

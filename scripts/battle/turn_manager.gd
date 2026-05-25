@@ -51,7 +51,7 @@ func _execute_enemy_turn() -> void:
 	battle_check_requested.emit()
 	if has_battle_ended():
 		return
-	start_turn("player")
+	_execute_round_end()
 
 func has_battle_ended() -> bool:
 	var bc := _get_battle_controller()
@@ -73,9 +73,9 @@ func end_turn() -> void:
 func _execute_round_end() -> void:
 	current_phase = Phase.ROUND_END
 	_process_passive_triggers("turn_end")
-	_process_poison_damage()
-	_process_debuff_ticks()
 	_process_buff_ticks()
+	_process_debuff_ticks()
+	_process_poison_damage()
 	_process_auto_heal()
 	_process_skill_cooldowns()
 	_reset_unit_states()

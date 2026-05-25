@@ -93,7 +93,7 @@ func _calc_crit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
 		return
 	var base_crit: int = weapon_data.get("crit", 0)
 	var skl: int = attacker.runtime_state.skl_stat
-	result["crit_rate"] = max(0, skl / 2 + base_crit)
+	result["crit_rate"] = min(50, max(0, skl / 2 + base_crit))
 
 func _calc_damage(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
@@ -171,8 +171,10 @@ func _apply_result(result: Dictionary, skill_service = null) -> void:
 		if crit_roll < result.get("crit_rate", 0):
 			result["did_crit"] = true
 			defender.take_damage(result.get("damage", 0) * 3)
+			_remove_sleep(defender)
 		else:
 			defender.take_damage(result.get("damage", 0))
+			_remove_sleep(defender)
 		result["applied_effects"].append("attacker_hit")
 		if skill_service:
 			skill_service.apply_unit_passives(attacker, "on_hit")
@@ -187,6 +189,7 @@ func _apply_result(result: Dictionary, skill_service = null) -> void:
 		var counter_roll: int = randi() % 100
 		if counter_roll < result.get("counter_hit_rate", 0):
 			attacker.take_damage(result.get("counter_damage", 0))
+			_remove_sleep(attacker)
 			if skill_service:
 				skill_service.apply_unit_passives(attacker, "on_damage")
 	if not attacker.is_alive():
@@ -199,6 +202,7 @@ func _apply_result(result: Dictionary, skill_service = null) -> void:
 		var follow_roll: int = randi() % 100
 		if follow_roll < result.get("hit_rate", 0):
 			defender.take_damage(result.get("damage", 0))
+			_remove_sleep(defender)
 			if skill_service:
 				skill_service.apply_unit_passives(defender, "on_damage")
 	if not defender.is_alive():
@@ -229,6 +233,16 @@ func _unit_has_tag(unit: Node, tag: String) -> bool:
 	var tags: Array = unit.runtime_state.get("tags", [])
 	return tag in tags
 
+func _remove_sleep(unit: Node) -> void:
+	if not unit or not unit.runtime_state:
+		return
+	var effects: Array[Dictionary] = unit.runtime_state.status_effects
+	var filtered: Array[Dictionary] = []
+	for e in effects:
+		if str(e.get("id", "")) != "sleep":
+			filtered.append(e)
+	unit.runtime_state.status_effects = filtered
+
 func _get_terrain_bonus(unit: Node, key: String) -> int:
 	var scene := _get_battle_scene(unit)
 	if scene and scene.has_method("get_terrain_data_at"):
@@ -249,7 +263,15 @@ func _can_counter(attacker: Node, defender: Node, defender_weapon: Dictionary) -
 	var distance := _get_distance(attacker, defender)
 	var min_range: int = defender_weapon.get("min_range", 1)
 	var max_range: int = defender_weapon.get("max_range", 1)
-	return distance >= min_range and distance <= max_range
+	if not (distance >= min_range and distance <= max_range):
+		return false
+	if not defender.runtime_state:
+		return false
+	for e in defender.runtime_state.status_effects:
+		var eid: String = str(e.get("id", ""))
+		if eid in ["sleep", "paralysis"] and e.get("duration", 0) > 0:
+			return false
+	return true
 
 func _calc_triangle_hit_bonus(attacker_type: String, defender_type: String) -> int:
 	if attacker_type == "" or defender_type == "":
