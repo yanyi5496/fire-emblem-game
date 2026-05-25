@@ -16,9 +16,13 @@
 | 剧情解析 | test_story_parser.gd | 叙述/角色/对话/BGM/事件 标签解析、空输入 | ✓ |
 | 存档读写流程 | test_save_load_flow.gd | 版本校验、字段验证、旧版迁移、to_dict/from_dict 往返、布尔标记 | ✓ |
 | AI 战斗行为 | test_ai_behavior.gd | 物理/魔法伤害计算、命中率、追击检测、武器三角 | ✓ |
+| 技能服务 | test_battle_skill_service.gd | 治疗/伤害/自 Buff 执行、非法目标拒绝 | ✓ |
+| 战斗生命周期 | test_battle_lifecycle_service.gd | 快照构建、战斗结果收口、completed_maps 与标记写入 | ✓ |
+| 胜负条件集成 | test_victory_judge_integration.gd | rout/survive/defend 三种胜利条件验证、max_turns 边界 | ✓ |
+| 章节流转 | test_chapter_flow.gd | battle_result → 标记写入 → resume_scene 路由 → to_dict/from_dict 持久化 | ✓ |
+| 主流程集成 | test_main_flow_integration.gd | TITLE→STORY→BATTLE→BATTLE_RESULT→TITLE phase 链字段不丢失、roundtrip | ✓ |
 
 ## 待补充
 
-- 主流程集成测试（自动检测 phase 转换链路）
-- 战斗 AI 决策验证
 - UI 可见性验收
+- 技能系统被动触发集成验证

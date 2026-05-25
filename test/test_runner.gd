@@ -18,6 +18,10 @@ const TEST_CLASSES := [
 	preload("res://test/test_save_load_flow.gd"),
 	preload("res://test/test_ai_behavior.gd"),
 	preload("res://test/test_battle_skill_service.gd"),
+	preload("res://test/test_battle_lifecycle_service.gd"),
+	preload("res://test/test_victory_judge_integration.gd"),
+	preload("res://test/test_chapter_flow.gd"),
+	preload("res://test/test_main_flow_integration.gd"),
 ]
 const TEST_NAMES := [
 	"test_data_schema",
@@ -35,6 +39,10 @@ const TEST_NAMES := [
 	"test_save_load_flow",
 	"test_ai_behavior",
 	"test_battle_skill_service",
+	"test_battle_lifecycle_service",
+	"test_victory_judge_integration",
+	"test_chapter_flow",
+	"test_main_flow_integration",
 ]
 
 var _results: Array[Dictionary] = []

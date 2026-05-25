@@ -38,6 +38,8 @@ func _is_defeat_condition_met(player_alive: bool, turn_number: int) -> bool:
 		"all_dead", "lord_dead":
 			return not player_alive
 		"turn_limit":
+			if victory_condition in ["defend", "survive"]:
+				return false
 			return _is_turn_limit_reached(turn_number)
 		_:
 			return false

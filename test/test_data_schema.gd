@@ -50,7 +50,7 @@ func run() -> Dictionary:
 			details.append("job %s missing weapons or mov" % jid)
 			all_pass = false
 
-	var skill_ids := ["sword_adept", "heal_light", "tough_body"]
+	var skill_ids := ["sword_adept", "heal_light", "tough_body", "flame_burst", "power_strike"]
 	for sid in skill_ids:
 		var s = DataManager.get_skill(sid)
 		if s.is_empty():
@@ -61,19 +61,24 @@ func run() -> Dictionary:
 			details.append("skill %s missing type/trigger/effect" % sid)
 			all_pass = false
 
-	var map_data = DataManager.get_map("mvp_map_01")
-	if map_data.is_empty():
-		details.append("MISSING map: mvp_map_01")
-		all_pass = false
-	else:
-		if not map_data.has("tiles") or not map_data.has("terrain_defs"):
-			details.append("map missing tiles or terrain_defs")
+	var map_ids := ["mvp_map_01", "mvp_map_02_defend"]
+	for mid in map_ids:
+		var map_data = DataManager.get_map(mid)
+		if map_data.is_empty():
+			details.append("MISSING map: %s" % mid)
 			all_pass = false
-		if map_data.has("units"):
-			for u in map_data["units"]:
-				if not u.has("unit_id") or not u.has("x") or not u.has("y") or not u.has("team"):
-					details.append("map unit entry incomplete")
-					all_pass = false
+		else:
+			if not map_data.has("tiles") or not map_data.has("terrain_defs"):
+				details.append("map %s missing tiles or terrain_defs" % mid)
+				all_pass = false
+			if not map_data.has("victory_condition") or not map_data.has("defeat_condition"):
+				details.append("map %s missing victory_condition or defeat_condition" % mid)
+				all_pass = false
+			if map_data.has("units"):
+				for u in map_data["units"]:
+					if not u.has("unit_id") or not u.has("x") or not u.has("y") or not u.has("team"):
+						details.append("map %s unit entry incomplete" % mid)
+						all_pass = false
 
 	for uid in unit_ids:
 		var u = DataManager.get_unit(uid)

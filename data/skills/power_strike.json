@@ -1,0 +1,23 @@
+{
+  "id": "power_strike",
+  "name": "力量迸发",
+  "type": "active",
+  "trigger": "before_combat",
+  "cost": {
+    "mp": 3
+  },
+  "effect": {
+    "type": "stat_bonus",
+    "target": "self",
+    "stat": "str",
+    "value": 4,
+    "duration": 3
+  },
+  "cooldown": 4,
+  "range": {
+    "min": 0,
+    "max": 0
+  },
+  "description": "主动使用，力量 +4 持续 3 回合",
+  "priority": 60
+}

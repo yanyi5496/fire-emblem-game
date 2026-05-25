@@ -6,7 +6,7 @@
   "exp": 0,
   "stats": {
     "hp": 18,
-    "mp": 0,
+    "mp": 10,
     "str": 7,
     "mag": 1,
     "skl": 6,
@@ -28,5 +28,5 @@
     "luk": 40
   },
   "inventory": ["iron_sword"],
-  "skills": ["sword_adept", "flame_burst"]
+  "skills": ["sword_adept", "flame_burst", "power_strike"]
 }

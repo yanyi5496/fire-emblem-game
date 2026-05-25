@@ -2,6 +2,8 @@ extends RefCounted
 
 class_name BattleSkillService
 
+const TEMP_PASSIVE_PREFIX := "temp_passive_"
+
 func get_available_skills(unit) -> Array[String]:
 	var available: Array[String] = []
 	if not unit or not unit.runtime_state:
@@ -68,6 +70,81 @@ func get_target_tiles(unit, skill_id: String, battle_query: Node, pathfinding: N
 		tiles.append(target.grid_pos)
 	return tiles
 
+func get_passive_skills(unit, trigger_type: String) -> Array[String]:
+	var result: Array[String] = []
+	if not unit or not unit.runtime_state:
+		return result
+	for skill_id in unit.runtime_state.skills:
+		var data: Dictionary = DataManager.get_skill(skill_id)
+		if data.get("type", "") == "passive" and str(data.get("trigger", "")) == trigger_type:
+			result.append(skill_id)
+	return result
+
+func apply_passive_skill(unit, skill_id: String) -> Dictionary:
+	if not unit or not unit.runtime_state or skill_id == "":
+		return {"success": false, "message": ""}
+	var data: Dictionary = DataManager.get_skill(skill_id)
+	if data.get("type", "") != "passive":
+		return {"success": false, "message": ""}
+	var effect: Dictionary = data.get("effect", {})
+	var effect_type: String = str(effect.get("type", ""))
+	match effect_type:
+		"stat_bonus":
+			return _apply_passive_stat_bonus(unit, effect)
+	return {"success": false, "message": ""}
+
+func _apply_passive_stat_bonus(unit, effect: Dictionary) -> Dictionary:
+	var stat: String = str(effect.get("stat", ""))
+	var value: int = int(effect.get("value", 0))
+	var duration: int = int(effect.get("duration", 1))
+	var effect_id: String = "%sstat_buff_%s" % [TEMP_PASSIVE_PREFIX, stat]
+	for existing in unit.runtime_state.status_effects:
+		if str(existing.get("id", "")) == effect_id:
+			return {"success": true, "action": "passive", "message": ""}
+	match stat:
+		"str": unit.runtime_state.str_stat += value
+		"mag": unit.runtime_state.mag_stat += value
+		"def": unit.runtime_state.def_stat += value
+		"res": unit.runtime_state.res_stat += value
+		"spd": unit.runtime_state.spd_stat += value
+		"skl": unit.runtime_state.skl_stat += value
+		"luk": unit.runtime_state.luk_stat += value
+		_: return {"success": false, "message": ""}
+	unit.runtime_state.status_effects.append({
+		"id": effect_id,
+		"duration": duration,
+		"stat": stat,
+		"value": value,
+	})
+	return {"success": true, "action": "passive", "message": ""}
+
+func apply_unit_passives(unit, trigger_type: String) -> void:
+	for skill_id in get_passive_skills(unit, trigger_type):
+		apply_passive_skill(unit, skill_id)
+
+func clear_temporary_passives(unit) -> void:
+	if not unit or not unit.runtime_state:
+		return
+	var retained_effects: Array[Dictionary] = []
+	for effect in unit.runtime_state.status_effects:
+		if str(effect.get("id", "")).begins_with(TEMP_PASSIVE_PREFIX):
+			_revert_stat_bonus(unit, effect)
+			continue
+		retained_effects.append(effect)
+	unit.runtime_state.status_effects = retained_effects
+
+func _revert_stat_bonus(unit, effect: Dictionary) -> void:
+	var stat_name: String = str(effect.get("stat", ""))
+	var value: int = int(effect.get("value", 0))
+	match stat_name:
+		"str": unit.runtime_state.str_stat = max(0, unit.runtime_state.str_stat - value)
+		"mag": unit.runtime_state.mag_stat = max(0, unit.runtime_state.mag_stat - value)
+		"def": unit.runtime_state.def_stat = max(0, unit.runtime_state.def_stat - value)
+		"res": unit.runtime_state.res_stat = max(0, unit.runtime_state.res_stat - value)
+		"spd": unit.runtime_state.spd_stat = max(0, unit.runtime_state.spd_stat - value)
+		"skl": unit.runtime_state.skl_stat = max(0, unit.runtime_state.skl_stat - value)
+		"luk": unit.runtime_state.luk_stat = max(0, unit.runtime_state.luk_stat - value)
+
 func execute_skill(unit, target, skill_id: String) -> Dictionary:
 	if not unit or not unit.runtime_state or skill_id == "":
 		return {"success": false, "message": ""}
@@ -92,6 +169,9 @@ func _execute_heal(unit, target, skill_id: String, effect: Dictionary) -> Dictio
 	var effect_value: int = int(effect.get("value", 0))
 	target.heal(effect_value)
 	unit.runtime_state.trigger_skill_cooldown(skill_id)
+	var staff_id: String = unit.runtime_state.equipped_weapon
+	if staff_id != "" and unit.runtime_state.has_method("consume_weapon_durability"):
+		unit.runtime_state.consume_weapon_durability(staff_id)
 	unit.wait()
 	return {
 		"success": true,

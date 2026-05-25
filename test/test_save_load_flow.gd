@@ -86,6 +86,30 @@ func run() -> Dictionary:
 		details.append("FAIL: legacy runtime save was not normalized into current schema")
 		all_pass = false
 
+	var runtime_state = preload("res://scripts/unit/unit_runtime_state.gd").new()
+	runtime_state.setup_from_template("hero_001")
+	var old_save_unit := {
+		"current_hp": runtime_state.current_hp,
+		"current_mp": runtime_state.current_mp,
+		"level": runtime_state.level,
+		"exp": runtime_state.exp,
+		"inventory": runtime_state.inventory.duplicate(),
+		"skills": runtime_state.skills.duplicate(),
+		"status_effects": [],
+		"skill_cooldowns": runtime_state.skill_cooldowns.duplicate(true),
+		"equipped_weapon": runtime_state.equipped_weapon,
+		"action_state": runtime_state.action_state,
+		"stats": runtime_state.get_stats(),
+	}
+	var equipped_weapon: String = runtime_state.equipped_weapon
+	runtime_state.weapon_durability.clear()
+	runtime_state.apply_saved_state(old_save_unit)
+	if equipped_weapon != "" and not runtime_state.is_weapon_broken(equipped_weapon):
+		details.append("PASS: legacy unit save without weapon_durability restores default durability")
+	else:
+		details.append("FAIL: legacy unit save should keep equipped weapon usable")
+		all_pass = false
+
 	var explicit_snapshot := {
 		"units": [{"unit_id": "hero_001"}],
 		"map_state": {"map_id": "mvp_map_01", "turn": 7},

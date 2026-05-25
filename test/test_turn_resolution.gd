@@ -73,6 +73,53 @@ func run() -> Dictionary:
 		details.append("FAIL: skill cooldown did not decrement correctly")
 		all_pass = false
 
+	var silence_runtime = urs_script.new()
+	silence_runtime.skills.append("heal_light")
+	silence_runtime.skill_cooldowns["heal_light"] = 0
+	if silence_runtime.can_use_skill("heal_light"):
+		details.append("PASS: can_use_skill true without silence")
+	else:
+		details.append("FAIL: should be able to use skill without silence")
+		all_pass = false
+	var silence_effects: Array[Dictionary] = [{"id": "silence", "duration": 2}]
+	silence_runtime.status_effects = silence_effects
+	if not silence_runtime.can_use_skill("heal_light"):
+		details.append("PASS: can_use_skill returns false when silenced")
+	else:
+		details.append("FAIL: silenced unit should not be able to use skills")
+		all_pass = false
+	var se: Array[Dictionary] = silence_runtime.status_effects.duplicate(true)
+	se[0]["duration"] = 1
+	silence_runtime.status_effects = se
+	if not silence_runtime.can_use_skill("heal_light"):
+		details.append("PASS: can_use_skill false while silence persists (dur=1)")
+	else:
+		details.append("FAIL: should still be silenced with duration 1")
+		all_pass = false
+	se[0]["duration"] = 0
+	silence_runtime.status_effects = se
+	if silence_runtime.can_use_skill("heal_light"):
+		details.append("PASS: can_use_skill true after silence expired")
+	else:
+		details.append("FAIL: should regain skill use after silence expires")
+		all_pass = false
+
+	var ses = preload("res://scripts/unit/status_effect_service.gd").new()
+	var test_unit = preload("res://scenes/battle/unit/unit.tscn").instantiate()
+	test_unit.setup("hero_002", "player", Vector2i(0, 0))
+	if not ses.has_effect(test_unit, "silence"):
+		details.append("PASS: unit starts without silence")
+	else:
+		details.append("FAIL: unit should not have silence initially")
+		all_pass = false
+	ses.add_effect(test_unit, "silence", 3)
+	if ses.has_effect(test_unit, "silence"):
+		details.append("PASS: add_effect adds silence to unit")
+	else:
+		details.append("FAIL: silence should be present after add_effect")
+		all_pass = false
+	test_unit.free()
+
 	return {
 		"passed": all_pass,
 		"message": "Turn resolution %s" % ["passed" if all_pass else "failed"],

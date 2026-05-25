@@ -103,6 +103,74 @@ func run() -> Dictionary:
 		details.append("FAIL: unarmed should have no triangle")
 		all_pass = false
 
+	var ai := preload("res://scripts/battle/ai_controller.gd").new()
+	var unit_scene := preload("res://scenes/battle/unit/unit.tscn")
+
+	var mock_attacker = unit_scene.instantiate()
+	mock_attacker.setup("enemy_001", "enemy", Vector2i(0, 0))
+	mock_attacker.runtime_state.str_stat = 12
+	mock_attacker.runtime_state.equipped_weapon = "iron_sword"
+
+	var mock_low_target = unit_scene.instantiate()
+	mock_low_target.setup("hero_001", "player", Vector2i(1, 0))
+	mock_low_target.runtime_state.current_hp = 3
+	mock_low_target.runtime_state.def_stat = 0
+
+	var mock_full_target = unit_scene.instantiate()
+	mock_full_target.setup("hero_002", "player", Vector2i(2, 0))
+	mock_full_target.runtime_state.def_stat = 10
+
+	var low_score := ai._evaluate_attack(mock_attacker, mock_low_target)
+	var high_score := ai._evaluate_attack(mock_attacker, mock_full_target)
+	if low_score > high_score:
+		details.append("PASS: AI prioritizes low-HP target over full-HP (score %d > %d)" % [low_score, high_score])
+	else:
+		details.append("FAIL: low-HP target should score higher (got %d vs %d)" % [low_score, high_score])
+		all_pass = false
+
+	var mock_healer = unit_scene.instantiate()
+	mock_healer.setup("hero_002", "player", Vector2i(3, 0))
+	mock_healer.runtime_state.def_stat = 5
+	mock_healer.runtime_state.skills.append("heal_light")
+
+	var mock_normal = unit_scene.instantiate()
+	mock_normal.setup("hero_001", "player", Vector2i(4, 0))
+	mock_normal.runtime_state.def_stat = 5
+
+	var healer_atk_score := ai._evaluate_attack(mock_attacker, mock_healer)
+	var normal_atk_score := ai._evaluate_attack(mock_attacker, mock_normal)
+	if healer_atk_score > normal_atk_score:
+		details.append("PASS: AI prioritizes healer over normal target (score %d > %d)" % [healer_atk_score, normal_atk_score])
+	else:
+		details.append("FAIL: healer should score higher than normal target")
+		all_pass = false
+
+	var skill_service = preload("res://scripts/battle/battle_skill_service.gd").new()
+	var self_buff_skill := ai._evaluate_self_buff(mock_attacker)
+	if self_buff_skill == "":
+		details.append("PASS: unit without self buff does not pick one")
+	else:
+		details.append("FAIL: unit without self buff should not pick self buff")
+		all_pass = false
+
+	var buff_unit = unit_scene.instantiate()
+	buff_unit.setup("hero_001", "enemy", Vector2i(5, 0))
+	var buff_before: int = buff_unit.runtime_state.str_stat
+	var self_buff_result: bool = ai._execute_self_buff_action(buff_unit, "power_strike", skill_service)
+	if self_buff_result and buff_unit.runtime_state.str_stat > buff_before:
+		details.append("PASS: AI self_buff action executes through shared skill_service")
+	else:
+		details.append("FAIL: AI self_buff action should increase stat via skill_service")
+		all_pass = false
+
+	buff_unit.free()
+
+	mock_attacker.free()
+	mock_low_target.free()
+	mock_full_target.free()
+	mock_healer.free()
+	mock_normal.free()
+
 	return {
 		"passed": all_pass,
 		"message": "AI behavior %s" % ["passed" if all_pass else "failed"],

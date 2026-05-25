@@ -42,6 +42,8 @@ func _ready() -> void:
 			if pending_story_path == "":
 				push_warning("Pending post-battle story not configured: %s" % story_key)
 				pending_story_path = DEFAULT_STORY_PATH
+			if not story_finished.is_connected(_on_post_battle_story_end):
+				story_finished.connect(_on_post_battle_story_end)
 			call_deferred("play_story", pending_story_path)
 			return
 		call_deferred("play_story", DEFAULT_STORY_PATH)
@@ -146,6 +148,18 @@ func _on_dialogue_box_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		_advance()
 
+func _on_post_battle_story_end() -> void:
+	var flow: Dictionary = DataManager.get_map(GameState.current_map_id) if GameState.current_map_id != "" else {}
+	var next_chapter: String = GameState.story_flags.get("next_chapter", "")
+	if next_chapter != "":
+		GameState.current_chapter = next_chapter
+		GameState.current_map_id = flow.get("id", GameState.current_map_id) if flow.get("id", "") != "" else ""
+		GameState.set_resume_scene("story")
+		SceneRouter.goto("story")
+	elif GameState.completed_maps.size() > 0:
+		GameState.current_map_id = ""
+		GameState.set_resume_scene("main_menu")
+
 func _handle_event(event_id: String) -> void:
 	match event_id:
 		"load_map":
@@ -175,4 +189,5 @@ func _finish() -> void:
 	hide()
 	choice_container.hide()
 	GameState.set_phase(GameState.GamePhase.NONE)
+	SaveManager.save_game(1)
 	story_finished.emit()

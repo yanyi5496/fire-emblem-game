@@ -31,8 +31,33 @@ var equipped_weapon: String = ""
 var inventory: Array[String] = []
 var skills: Array[String] = []
 var skill_cooldowns: Dictionary = {}
+var weapon_durability: Dictionary = {}
+
+func get_weapon_durability(weapon_id: String) -> int:
+	if weapon_durability.has(weapon_id):
+		return int(weapon_durability.get(weapon_id, 0))
+	var data: Dictionary = DataManager.get_weapon(weapon_id)
+	var dur: int = int(data.get("durability", 0))
+	weapon_durability[weapon_id] = dur
+	return dur
+
+func consume_weapon_durability(weapon_id: String) -> void:
+	var dur: int = get_weapon_durability(weapon_id)
+	dur -= 1
+	if dur <= 0:
+		weapon_durability.erase(weapon_id)
+	else:
+		weapon_durability[weapon_id] = dur
+
+func is_weapon_broken(weapon_id: String) -> bool:
+	if weapon_id == "":
+		return true
+	return get_weapon_durability(weapon_id) <= 0
 
 func can_use_skill(skill_id: String) -> bool:
+	for e in status_effects:
+		if e.get("id", "") == "silence" and e.get("duration", 0) > 0:
+			return false
 	if not skill_cooldowns.has(skill_id):
 		return true
 	return int(skill_cooldowns.get(skill_id, 0)) <= 0
@@ -75,6 +100,7 @@ func setup_from_template(template_id: String) -> void:
 			skill_cooldowns[skill_id] = 0
 	if not inventory.is_empty():
 		equipped_weapon = inventory[0]
+		get_weapon_durability(equipped_weapon)
 
 func get_stats() -> Dictionary:
 	return {
@@ -106,6 +132,12 @@ func apply_saved_state(data: Dictionary) -> void:
 	skill_cooldowns = data.get("skill_cooldowns", skill_cooldowns).duplicate(true)
 	equipped_weapon = str(data.get("equipped_weapon", equipped_weapon))
 	action_state = int(data.get("action_state", action_state))
+	var raw_durability: Dictionary = data.get("weapon_durability", {})
+	weapon_durability.clear()
+	for key in raw_durability:
+		weapon_durability[str(key)] = int(raw_durability[key])
+	if equipped_weapon != "" and not weapon_durability.has(equipped_weapon):
+		get_weapon_durability(equipped_weapon)
 	var stats: Dictionary = data.get("stats", {})
 	max_hp = int(stats.get("max_hp", max_hp))
 	max_mp = int(stats.get("max_mp", max_mp))

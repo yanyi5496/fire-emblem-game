@@ -274,6 +274,11 @@ func _on_action_move() -> void:
 	_show_movement_range(selected_unit)
 
 func _on_action_attack() -> void:
+	var weapon_id: String = selected_unit.runtime_state.equipped_weapon
+	if weapon_id == "" or selected_unit.runtime_state.is_weapon_broken(weapon_id):
+		if battle_hud and battle_hud.has_method("show_status_message"):
+			battle_hud.show_status_message("武器已损坏")
+		return
 	interaction_state = BattleInteractionState.TARGETING
 	attack_targets = get_enemies_in_range(selected_unit)
 	var tiles: Array[Vector2i] = []
@@ -319,8 +324,14 @@ func _on_attack_confirmed() -> void:
 		return
 	var target: Node = pending_target
 	interaction_state = BattleInteractionState.IDLE
+	skill_service.apply_unit_passives(selected_unit, "before_combat")
+	skill_service.apply_unit_passives(target, "before_combat")
 	selected_unit.attack(target)
-	combat_manager.execute(selected_unit, target, weapon_id)
+	combat_manager.execute(selected_unit, target, weapon_id, skill_service)
+	skill_service.apply_unit_passives(selected_unit, "after_combat")
+	skill_service.apply_unit_passives(target, "after_combat")
+	skill_service.clear_temporary_passives(selected_unit)
+	skill_service.clear_temporary_passives(target)
 	_clear_highlights()
 	attack_targets.clear()
 	pending_target = null

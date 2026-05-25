@@ -11,6 +11,8 @@ const SCORE_KILL := 100
 const SCORE_LOW_HP := 30
 const SCORE_DAMAGE_PER_HP := 3
 const SCORE_HEAL := 40
+const SCORE_TARGET_HEALER := 20
+const SCORE_SELF_BUFF := 15
 const SCORE_NEAREST := 10
 const SCORE_MOVE_TO_ATTACK := 5
 
@@ -49,7 +51,13 @@ func _decide_action(unit: Node) -> Dictionary:
 		if heal_score > best_action.get("score", -999):
 			best_action = { "type": "heal", "target": heal_target, "score": heal_score }
 
-	if best_action.get("type", "wait") in ["attack", "heal"]:
+	var self_buff_skill := _evaluate_self_buff(unit)
+	if self_buff_skill != "":
+		var buff_score: int = SCORE_SELF_BUFF
+		if buff_score > best_action.get("score", -999):
+			best_action = { "type": "self_buff", "skill_id": self_buff_skill, "score": buff_score }
+
+	if best_action.get("type", "wait") in ["attack", "heal", "self_buff"]:
 		return best_action
 
 	var move_target: Vector2i = _find_move_target(unit, battle_controller)
@@ -58,6 +66,15 @@ func _decide_action(unit: Node) -> Dictionary:
 		return { "type": "move", "target_pos": move_target, "score": move_score }
 
 	return best_action
+
+func _is_healer(unit: Node) -> bool:
+	if not unit or not unit.runtime_state:
+		return false
+	for skill_id in unit.runtime_state.skills:
+		var data: Dictionary = DataManager.get_skill(skill_id)
+		if data.get("effect", {}).get("type", "") == "heal":
+			return true
+	return false
 
 func _evaluate_attack(attacker: Node, target: Node) -> int:
 	var score := 0
@@ -72,6 +89,8 @@ func _evaluate_attack(attacker: Node, target: Node) -> int:
 	score += damage * SCORE_DAMAGE_PER_HP
 	if target.get_current_hp() < target.get_max_hp() * 0.3:
 		score += SCORE_LOW_HP
+	if _is_healer(target):
+		score += SCORE_TARGET_HEALER
 	return score
 
 func _evaluate_heal(unit: Node):
@@ -118,15 +137,48 @@ func _evaluate_move_target(unit: Node, tile: Vector2i, battle_controller: Node) 
 	score = max(0, 30 - nearest_dist)
 	return score
 
+func _evaluate_self_buff(unit: Node) -> String:
+	if not unit or not unit.runtime_state:
+		return ""
+	for skill_id in unit.runtime_state.skills:
+		var data: Dictionary = DataManager.get_skill(skill_id)
+		if data.get("type", "") != "active":
+			continue
+		if not unit.runtime_state.can_use_skill(skill_id):
+			continue
+		var effect: Dictionary = data.get("effect", {})
+		if effect.get("type", "") == "stat_bonus" and str(effect.get("target", "")) == "self":
+			return skill_id
+	return ""
+
 func _execute_action(unit: Node, action: Dictionary) -> void:
 	match action.get("type", "wait"):
 		"attack":
 			var target = action.get("target")
 			var weapon_id: String = unit.runtime_state.equipped_weapon
 			if target and weapon_id != "":
+				var battle_controller := _get_battle_controller(unit)
+				var active_skill_service = _get_skill_service_from_controller(battle_controller)
+				if active_skill_service:
+					active_skill_service.apply_unit_passives(unit, "before_combat")
+					active_skill_service.apply_unit_passives(target, "before_combat")
 				unit.attack(target)
-				_get_combat_manager().execute(unit, target, weapon_id)
+				_get_combat_manager().execute(unit, target, weapon_id, active_skill_service)
+				if active_skill_service:
+					active_skill_service.apply_unit_passives(unit, "after_combat")
+					active_skill_service.apply_unit_passives(target, "after_combat")
+					active_skill_service.clear_temporary_passives(unit)
+					active_skill_service.clear_temporary_passives(target)
 			else:
+				unit.wait()
+		"self_buff":
+			var skill_id: String = str(action.get("skill_id", ""))
+			if skill_id == "":
+				unit.wait()
+				return
+			var bc := _get_battle_controller(unit)
+			var active_skill_service = _get_skill_service_from_controller(bc)
+			if not _execute_self_buff_action(unit, skill_id, active_skill_service):
 				unit.wait()
 		"move":
 			var battle_controller := _get_battle_controller(unit)
@@ -145,6 +197,17 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 				unit.wait()
 		_:
 			unit.wait()
+
+func _get_skill_service_from_controller(battle_controller):
+	if battle_controller and battle_controller.skill_service:
+		return battle_controller.skill_service
+	return null
+
+func _execute_self_buff_action(unit: Node, skill_id: String, active_skill_service) -> bool:
+	if not unit or skill_id == "" or not active_skill_service:
+		return false
+	var result: Dictionary = active_skill_service.execute_skill(unit, unit, skill_id)
+	return bool(result.get("success", false))
 
 func _execute_skill_heal(unit: Node, target: Node, battle_controller: Node) -> void:
 	for skill_id in unit.runtime_state.skills:

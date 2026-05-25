@@ -22,11 +22,16 @@ func simulate(attacker: Node, defender: Node, weapon_id: String) -> Dictionary:
 	_calc_follow_up(result, weapon_data)
 	return result
 
-func execute(attacker: Node, defender: Node, weapon_id: String) -> void:
+func execute(attacker: Node, defender: Node, weapon_id: String, skill_service = null) -> void:
 	var result: Dictionary = simulate(attacker, defender, weapon_id)
 	combat_started.emit(attacker.unit_id, defender.unit_id)
-	_apply_result(result)
+	_apply_result(result, skill_service)
+	_consume_weapon_durability(attacker, weapon_id)
 	combat_finished.emit(result)
+
+func _consume_weapon_durability(unit: Node, weapon_id: String) -> void:
+	if unit and unit.runtime_state and unit.runtime_state.has_method("consume_weapon_durability"):
+		unit.runtime_state.consume_weapon_durability(weapon_id)
 
 func _create_result(attacker: Node, defender: Node, weapon_id: String, weapon_data: Dictionary) -> Dictionary:
 	return {
@@ -148,7 +153,7 @@ func _calc_follow_up(result: Dictionary, weapon_data: Dictionary) -> void:
 	var def_spd: int = defender.runtime_state.spd_stat - def_weight
 	result["did_follow_up"] = max(0, atk_spd) >= max(0, def_spd) + 4
 
-func _apply_result(result: Dictionary) -> void:
+func _apply_result(result: Dictionary, skill_service = null) -> void:
 	var attacker: Node = result.get("attacker_ref") as Node
 	var defender: Node = result.get("defender_ref") as Node
 	if not attacker or not defender:
@@ -162,18 +167,38 @@ func _apply_result(result: Dictionary) -> void:
 			defender.take_damage(result.get("damage", 0) * 3)
 		else:
 			defender.take_damage(result.get("damage", 0))
+		result["applied_effects"].append("attacker_hit")
+		if skill_service:
+			skill_service.apply_unit_passives(defender, "on_damage")
 	if not defender.is_alive():
+		result["applied_effects"].append("defender_killed")
+		if skill_service:
+			skill_service.apply_unit_passives(attacker, "on_kill")
+			skill_service.apply_unit_passives(defender, "on_death")
 		return
 	if result.get("did_counter", false):
 		var counter_roll: int = randi() % 100
 		if counter_roll < result.get("counter_hit_rate", 0):
 			attacker.take_damage(result.get("counter_damage", 0))
+			if skill_service:
+				skill_service.apply_unit_passives(attacker, "on_damage")
 	if not attacker.is_alive():
+		result["applied_effects"].append("attacker_killed")
+		if skill_service:
+			skill_service.apply_unit_passives(defender, "on_kill")
+			skill_service.apply_unit_passives(attacker, "on_death")
 		return
 	if result.get("did_follow_up", false):
 		var follow_roll: int = randi() % 100
 		if follow_roll < result.get("hit_rate", 0):
 			defender.take_damage(result.get("damage", 0))
+			if skill_service:
+				skill_service.apply_unit_passives(defender, "on_damage")
+	if not defender.is_alive():
+		result["applied_effects"].append("defender_killed")
+		if skill_service:
+			skill_service.apply_unit_passives(attacker, "on_kill")
+			skill_service.apply_unit_passives(defender, "on_death")
 
 func _calc_hit_value(attacker: Node, defender: Node, weapon_data: Dictionary, triangle_hit_bonus: int) -> int:
 	var base_hit: int = weapon_data.get("hit", 0)
@@ -182,7 +207,12 @@ func _calc_hit_value(attacker: Node, defender: Node, weapon_data: Dictionary, tr
 	var target_spd: int = defender.runtime_state.spd_stat
 	var target_luk: int = defender.runtime_state.luk_stat
 	var avoid_bonus: int = _get_terrain_bonus(defender, "avoid_bonus")
-	var height_bonus: int = _get_height(attacker) - _get_height(defender)
+	var height_bonus: int = 0
+	var h_diff: int = _get_height(attacker) - _get_height(defender)
+	if h_diff > 0:
+		height_bonus = 10
+	elif h_diff < 0:
+		height_bonus = -10
 	var raw: int = base_hit + skl * 2 + luk + triangle_hit_bonus + height_bonus - (target_spd / 2 + target_luk + avoid_bonus)
 	return clampi(raw, 0, 100)
 
@@ -228,6 +258,8 @@ func _calc_triangle_damage_bonus(attacker_type: String, defender_type: String) -
 
 func _get_battle_scene(node: Node) -> Node:
 	if not node:
+		return null
+	if not node.is_inside_tree():
 		return null
 	var tree := node.get_tree()
 	if not tree:

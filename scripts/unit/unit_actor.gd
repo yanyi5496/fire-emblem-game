@@ -96,6 +96,7 @@ func to_save_dict() -> Dictionary:
 		"skills": runtime_state.skills.duplicate() if runtime_state else [],
 		"status_effects": runtime_state.status_effects.duplicate(true) if runtime_state else [],
 		"skill_cooldowns": runtime_state.skill_cooldowns.duplicate(true) if runtime_state else {},
+		"weapon_durability": runtime_state.weapon_durability.duplicate(true) if runtime_state else {},
 		"stats": runtime_state.get_stats() if runtime_state else {},
 	}
 
