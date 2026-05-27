@@ -15,17 +15,6 @@ run/main_scene="res://scenes/boot/boot_scene.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
-[display]
-
-window/size/viewport_width=1280
-window/size/viewport_height=720
-window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
-
-[debug]
-
-gdscript/warnings/inference_on_variant="ignore"
-
 [autoload]
 
 DataManager="*res://scripts/autoload/data_manager.gd"
@@ -34,6 +23,16 @@ SceneRouter="*res://scripts/autoload/scene_router.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 InputManager="*res://scripts/autoload/input_manager.gd"
+
+[debug]
+
+gdscript/warnings/inference_on_variant="ignore"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
 
 [physics]
 

@@ -63,7 +63,24 @@ func can_use_skill(skill_id: String) -> bool:
 			return false
 	if not skill_cooldowns.has(skill_id):
 		return true
-	return int(skill_cooldowns.get(skill_id, 0)) <= 0
+	if int(skill_cooldowns.get(skill_id, 0)) > 0:
+		return false
+	var skill_data: Dictionary = DataManager.get_skill(skill_id)
+	var cost_mp: int = int(skill_data.get("cost", {}).get("mp", 0))
+	if cost_mp > 0 and current_mp < cost_mp:
+		return false
+	return true
+
+func consume_skill_cost(skill_id: String) -> void:
+	var skill_data: Dictionary = DataManager.get_skill(skill_id)
+	current_mp = max(0, current_mp - int(skill_data.get("cost", {}).get("mp", 0)))
+
+func can_equip_weapon_type(weapon_type: String) -> bool:
+	if job_id == "" or weapon_type == "":
+		return true
+	var job_data: Dictionary = DataManager.get_job(job_id)
+	var allowed: Array = job_data.get("weapons", [])
+	return weapon_type in allowed
 
 func trigger_skill_cooldown(skill_id: String) -> void:
 	var skill_data: Dictionary = DataManager.get_skill(skill_id)

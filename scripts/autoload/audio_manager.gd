@@ -33,6 +33,11 @@ func play_sfx(sfx_id: String) -> void:
 	add_child(player)
 	player.play()
 	player.finished.connect(player.queue_free)
+	if player.is_inside_tree():
+		get_tree().create_timer(10.0).timeout.connect(func():
+			if is_instance_valid(player):
+				player.queue_free()
+		)
 
 func set_volume(bus: Bus, volume: int) -> void:
 	AudioServer.set_bus_volume_db(bus, linear_to_db(volume / 100.0))

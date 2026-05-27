@@ -65,11 +65,15 @@ func _load_directory(dir_name: String, target: Dictionary) -> void:
 				var json_parser := JSON.new()
 				var parse_result := json_parser.parse(json_str)
 				if parse_result == OK:
-					var data := json_parser.get_data() as Dictionary
-					if data.has("id"):
-						target[data["id"]] = data
+					var data: Variant = json_parser.get_data()
+					if not (data is Dictionary):
+						push_error("JSON root is not a Dictionary in %s" % file_path)
 					else:
-						push_error("Missing 'id' in %s" % file_path)
+						var dict: Dictionary = data as Dictionary
+						if dict.has("id"):
+							target[dict["id"]] = dict
+						else:
+							push_error("Missing 'id' in %s" % file_path)
 				else:
 					push_error("JSON parse error in %s: %s" % [file_path, json_parser.get_error_message()])
 		file_name = dir.get_next()

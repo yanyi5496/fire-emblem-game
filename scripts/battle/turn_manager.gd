@@ -21,6 +21,7 @@ func initialize_battle(starting_turn: int = 1) -> void:
 	turn_number = max(1, starting_turn)
 	GameState.set_turn(turn_number)
 	ai_controller = _ai_dep.new()
+	add_child(ai_controller)
 
 func start_turn(phase_name: String) -> void:
 	match phase_name:

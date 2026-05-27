@@ -25,6 +25,20 @@ func play_animation(anim_name: String) -> void:
 	if animation_player and animation_player.has_animation(anim_name):
 		animation_player.play(anim_name)
 
+func walk_to(target: Vector2i) -> void:
+	grid_pos = target
+	var target_pixel := Vector2(target.x * 64, target.y * 64)
+	var dist := position.distance_to(target_pixel)
+	var duration := clampf(dist / 200.0, 0.1, 0.5)
+	play_animation("walk")
+	var tween := create_tween()
+	tween.tween_property(self, "position", target_pixel, duration)
+	tween.tween_callback(func():
+		if is_instance_valid(self):
+			play_animation("idle")
+	)
+	moved.emit(target)
+
 func is_alive() -> bool:
 	return _is_alive and runtime_state != null and runtime_state.action_state != _urs_dep.ActionState.DEAD
 
@@ -100,7 +114,8 @@ func heal(amount: int) -> void:
 
 func die() -> void:
 	_is_alive = false
-	runtime_state.action_state = _urs_dep.ActionState.DEAD
+	if runtime_state:
+		runtime_state.action_state = _urs_dep.ActionState.DEAD
 	died.emit()
 
 func to_save_dict() -> Dictionary:

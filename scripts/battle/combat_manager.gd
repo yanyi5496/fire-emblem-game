@@ -61,7 +61,7 @@ func _calc_weapon_triangle(result: Dictionary, weapon_data: Dictionary) -> void:
 	if atk_type == "" or not result.has("defender_ref"):
 		return
 	var defender: Node = result["defender_ref"] as Node
-	if not defender:
+	if not defender or not defender.runtime_state:
 		return
 	var def_weapon_id: String = defender.runtime_state.equipped_weapon
 	if def_weapon_id == "":
@@ -81,14 +81,14 @@ func _calc_weapon_triangle(result: Dictionary, weapon_data: Dictionary) -> void:
 func _calc_hit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
 	var defender: Node = result["defender_ref"] as Node
-	if not attacker or not defender:
+	if not attacker or not defender or not attacker.runtime_state or not defender.runtime_state:
 		result["hit_rate"] = 50
 		return
 	result["hit_rate"] = _calc_hit_value(attacker, defender, weapon_data, result.get("triangle_hit_bonus", 0))
 
 func _calc_crit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
-	if not attacker:
+	if not attacker or not attacker.runtime_state:
 		result["crit_rate"] = 0
 		return
 	var base_crit: int = weapon_data.get("crit", 0)
@@ -98,7 +98,7 @@ func _calc_crit_rate(result: Dictionary, weapon_data: Dictionary) -> void:
 func _calc_damage(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
 	var defender: Node = result["defender_ref"] as Node
-	if not attacker or not defender:
+	if not attacker or not defender or not attacker.runtime_state or not defender.runtime_state:
 		result["damage"] = 0
 		return
 	var might: int = weapon_data.get("might", 0)
@@ -118,7 +118,7 @@ func _calc_damage(result: Dictionary, weapon_data: Dictionary) -> void:
 func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
 	var defender: Node = result["defender_ref"] as Node
-	if not attacker or not defender:
+	if not attacker or not defender or not attacker.runtime_state or not defender.runtime_state:
 		result["did_counter"] = false
 		return
 	var def_weapon_id: String = defender.runtime_state.equipped_weapon
@@ -146,7 +146,7 @@ func _calc_counter(result: Dictionary, weapon_data: Dictionary) -> void:
 func _calc_follow_up(result: Dictionary, weapon_data: Dictionary) -> void:
 	var attacker: Node = result["attacker_ref"] as Node
 	var defender: Node = result["defender_ref"] as Node
-	if not attacker or not defender:
+	if not attacker or not defender or not attacker.runtime_state or not defender.runtime_state:
 		result["did_follow_up"] = false
 		return
 	var atk_weight: int = weapon_data.get("weight", 0)
@@ -162,7 +162,7 @@ func _calc_follow_up(result: Dictionary, weapon_data: Dictionary) -> void:
 func _apply_result(result: Dictionary, skill_service = null) -> void:
 	var attacker: Node = result.get("attacker_ref") as Node
 	var defender: Node = result.get("defender_ref") as Node
-	if not attacker or not defender:
+	if not attacker or not defender or not attacker.runtime_state or not defender.runtime_state:
 		return
 	var hit_roll: int = randi() % 100
 	if hit_roll < result.get("hit_rate", 0):

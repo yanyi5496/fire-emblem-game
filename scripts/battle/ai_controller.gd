@@ -239,6 +239,10 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 			var target = action.get("target")
 			var weapon_id: String = unit.runtime_state.equipped_weapon
 			if target and weapon_id != "":
+				var weapon_type: String = DataManager.get_weapon(weapon_id).get("type", "")
+				if not unit.runtime_state.can_equip_weapon_type(weapon_type):
+					unit.wait()
+					return
 				var battle_controller := _get_battle_controller(unit)
 				var active_skill_service = _get_skill_service_from_controller(battle_controller)
 				if active_skill_service:

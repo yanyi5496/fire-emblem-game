@@ -225,13 +225,13 @@ func _show_movement_range(unit) -> void:
 func _highlight_tiles(tiles: Array[Vector2i]) -> void:
 	if not highlight_tile_map:
 		return
-	highlight_tile_map.clear()
+	highlight_tile_map.clear_layer(0)
 	for tile in tiles:
 		highlight_tile_map.set_cell(0, tile, 0, Vector2i(1, 0))
 
 func _clear_highlights() -> void:
 	if highlight_tile_map:
-		highlight_tile_map.clear()
+		highlight_tile_map.clear_layer(0)
 	movement_tiles.clear()
 	attack_targets.clear()
 
@@ -288,6 +288,12 @@ func _on_action_attack() -> void:
 	if weapon_id == "" or selected_unit.runtime_state.is_weapon_broken(weapon_id):
 		if battle_hud and battle_hud.has_method("show_status_message"):
 			battle_hud.show_status_message("武器已损坏")
+		return
+	var weapon_data: Dictionary = DataManager.get_weapon(weapon_id)
+	var weapon_type: String = weapon_data.get("type", "")
+	if not selected_unit.runtime_state.can_equip_weapon_type(weapon_type):
+		if battle_hud and battle_hud.has_method("show_status_message"):
+			battle_hud.show_status_message("该职业无法使用此武器")
 		return
 	interaction_state = BattleInteractionState.TARGETING
 	attack_targets = get_enemies_in_range(selected_unit)
@@ -518,6 +524,10 @@ func _spawn_effect(effect_scene: PackedScene, pos: Vector2) -> void:
 	units_container.add_child(instance)
 	if instance.has_method("play"):
 		instance.play()
+	if instance.has_signal("animation_finished"):
+		instance.animation_finished.connect(instance.queue_free, CONNECT_ONE_SHOT)
+	else:
+		get_tree().create_timer(1.5).timeout.connect(instance.queue_free)
 
 func _distribute_combat_exp(attacker: Node, defender: Node) -> void:
 	if not attacker.runtime_state or not defender.runtime_state:
@@ -578,8 +588,7 @@ func _on_end_turn_pressed() -> void:
 func move_unit_to(unit: Node, target_pos: Vector2i) -> void:
 	if not unit:
 		return
-	unit.grid_pos = target_pos
-	unit.position = Vector2(target_pos.x * 64, target_pos.y * 64)
+	unit.walk_to(target_pos)
 	if unit.runtime_state and unit.runtime_state.action_state == _urs_dep.ActionState.IDLE:
 		unit.runtime_state.action_state = _urs_dep.ActionState.MOVED
 
@@ -639,7 +648,7 @@ func _apply_map_data() -> void:
 	var width: int = map_data.get("width", 0)
 	var height: int = map_data.get("height", 0)
 	var tiles: Array = map_data.get("tiles", [])
-	tile_map.clear()
+	tile_map.clear_layer(0)
 	if tile_map.tile_set == null:
 		_update_tile_info(Vector2i.ZERO)
 		return

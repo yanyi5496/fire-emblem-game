@@ -41,4 +41,10 @@ func _apply_theme() -> void:
 	theme.set_color("font_color", "HSlider", Color(0.9, 0.9, 0.85, 1))
 	theme.set_color("font_color", "CheckBox", Color(0.9, 0.9, 0.85, 1))
 
+	_apply_default_font(theme)
+
 	get_tree().root.theme = theme
+
+func _apply_default_font(theme: Theme) -> void:
+	theme.default_font = ThemeDB.fallback_font
+	theme.default_font_size = 16

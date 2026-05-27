@@ -30,7 +30,7 @@ func get_enemy_units_for(unit: Node) -> Array:
 	return result
 
 func get_walkable_tiles_for(unit: Node) -> Array[Vector2i]:
-	if not pathfinding or not tile_map:
+	if not unit or not unit.runtime_state or not pathfinding or not tile_map:
 		return []
 	var reachable: Array = pathfinding.get_reachable_tiles(unit.grid_pos, unit.runtime_state.mov_stat, tile_map)
 	var result: Array[Vector2i] = []

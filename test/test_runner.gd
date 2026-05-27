@@ -22,6 +22,9 @@ const TEST_CLASSES := [
 	preload("res://test/test_victory_judge_integration.gd"),
 	preload("res://test/test_chapter_flow.gd"),
 	preload("res://test/test_main_flow_integration.gd"),
+	preload("res://test/test_walk_animation.gd"),
+	preload("res://test/test_skill_mp_cost.gd"),
+	preload("res://test/test_weapon_job_match.gd"),
 ]
 const TEST_NAMES := [
 	"test_data_schema",
@@ -43,6 +46,9 @@ const TEST_NAMES := [
 	"test_victory_judge_integration",
 	"test_chapter_flow",
 	"test_main_flow_integration",
+	"test_walk_animation",
+	"test_skill_mp_cost",
+	"test_weapon_job_match",
 ]
 
 var _results: Array[Dictionary] = []
