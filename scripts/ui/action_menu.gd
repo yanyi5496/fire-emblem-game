@@ -2,29 +2,34 @@ extends Panel
 
 class_name ActionMenu
 
-const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
-
 signal move_selected()
 signal attack_selected()
 signal skill_selected()
 signal wait_selected()
 signal switch_weapon_selected()
 
-func show_for_unit(unit) -> void:
-	var can_move: bool = unit.can_move()
-	var can_act: bool = unit.can_act()
-	$VBoxContainer/MoveButton.visible = can_move
-	$VBoxContainer/AttackButton.visible = can_act
-	var has_ready_skill := false
-	for skill_id in unit.runtime_state.skills:
-		var skill_data: Dictionary = DataManager.get_skill(skill_id)
-		if skill_data.get("type", "") == "active" and unit.runtime_state.can_use_skill(skill_id):
-			has_ready_skill = true
-			break
-	$VBoxContainer/SkillButton.visible = can_act and has_ready_skill
+func show_for_view_model(vm: Dictionary) -> void:
+	$VBoxContainer/MoveButton.visible = vm.get("can_move", false)
+	$VBoxContainer/AttackButton.visible = vm.get("can_act", false)
+	$VBoxContainer/SkillButton.visible = vm.get("can_act", false) and vm.get("has_ready_skill", false)
 	$VBoxContainer/WaitButton.visible = true
-	$VBoxContainer/SwitchWeaponButton.visible = can_act and unit.runtime_state.inventory.size() > 1
+	$VBoxContainer/SwitchWeaponButton.visible = vm.get("can_act", false) and vm.get("weapon_count", 0) > 1
 	show()
+
+func show_for_unit(unit) -> void:
+	var vm := {
+		"can_move": unit.can_move(),
+		"can_act": unit.can_act(),
+		"has_ready_skill": false,
+		"weapon_count": unit.runtime_state.inventory.size() if unit.runtime_state else 0,
+	}
+	if unit.runtime_state:
+		for skill_id in unit.runtime_state.skills:
+			var skill_data: Dictionary = DataManager.get_skill(skill_id)
+			if skill_data.get("type", "") == "active" and unit.runtime_state.can_use_skill(skill_id):
+				vm["has_ready_skill"] = true
+				break
+	show_for_view_model(vm)
 
 func _on_move_pressed() -> void:
 	move_selected.emit()

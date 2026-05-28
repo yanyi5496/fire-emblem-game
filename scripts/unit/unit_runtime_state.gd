@@ -2,8 +2,6 @@ extends Node
 
 class_name UnitRuntimeState
 
-enum ActionState { IDLE, MOVED, ACTED, DEAD }
-
 var template_id: String = ""
 var unit_name: String = ""
 var job_id: String = ""
@@ -26,7 +24,7 @@ var level: int = 1
 var exp: int = 0
 var pending_level_ups: Array[Dictionary] = []
 
-var action_state: ActionState = ActionState.IDLE
+var action_state: int = GameConstants.ActionState.IDLE
 var status_effects: Array[Dictionary] = []
 var ai_type: String = "aggressive"
 var tags: Array[String] = []

@@ -239,6 +239,12 @@ func _on_dialogue_box_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		_advance()
 
+func _exit_tree() -> void:
+	if InputManager.confirm_pressed.is_connected(_on_confirm_pressed):
+		InputManager.confirm_pressed.disconnect(_on_confirm_pressed)
+	if is_instance_valid(dialogue_box) and dialogue_box.gui_input.is_connected(_on_dialogue_box_gui_input):
+		dialogue_box.gui_input.disconnect(_on_dialogue_box_gui_input)
+
 func _on_post_battle_story_end() -> void:
 	var flow: Dictionary = DataManager.get_map(GameState.current_map_id) if GameState.current_map_id != "" else {}
 	var next_chapter: String = GameState.story_flags.get("next_chapter", "")

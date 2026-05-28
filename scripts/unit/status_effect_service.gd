@@ -2,8 +2,6 @@ extends RefCounted
 
 class_name StatusEffectService
 
-const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
-
 enum EffectType { POISON, SLEEP, PARALYSIS, SILENCE }
 
 func add_effect(unit, effect_type: String, duration: int) -> void:

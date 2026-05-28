@@ -46,5 +46,8 @@ func _apply_theme() -> void:
 	get_tree().root.theme = theme
 
 func _apply_default_font(theme: Theme) -> void:
-	theme.default_font = ThemeDB.fallback_font
+	var sys_font := SystemFont.new()
+	sys_font.font_names = PackedStringArray(["Microsoft YaHei", "SimHei", "Noto Sans SC"])
+	sys_font.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+	theme.default_font = sys_font
 	theme.default_font_size = 16

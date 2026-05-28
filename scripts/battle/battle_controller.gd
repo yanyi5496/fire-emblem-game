@@ -3,10 +3,6 @@ extends Node
 class_name BattleController
 
 const _combat_dep := preload("res://scripts/battle/combat_manager.gd")
-const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
-const _turn_mgr_dep := preload("res://scripts/battle/turn_manager.gd")
-const _pathfind_dep := preload("res://scripts/battle/pathfinding_service.gd")
-const _urs_dep := preload("res://scripts/unit/unit_runtime_state.gd")
 const _query_dep := preload("res://scripts/battle/battle_query_service.gd")
 const _victory_dep := preload("res://scripts/battle/victory_judge.gd")
 const _skill_dep := preload("res://scripts/battle/battle_skill_service.gd")
@@ -34,6 +30,9 @@ var victory_judge = null
 var battle_hud: Node = null
 var skill_service = null
 var battle_lifecycle = null
+var map_setup_service = null
+var combat_exec_service = null
+var battle_context: BattleContext = null
 
 @onready var turn_manager = $TurnManager
 @onready var cursor: Node2D = $Cursor
@@ -56,7 +55,21 @@ func _ready() -> void:
 	victory_judge = _victory_dep.new()
 	skill_service = _skill_dep.new()
 	battle_lifecycle = _lifecycle_dep.new()
+	map_setup_service = MapSetupService.new()
+	combat_exec_service = CombatExecService.new()
+	combat_exec_service.initialize(units_container, _hit_effect, _crit_effect, _skill_effect)
 	add_child(battle_query)
+	battle_context = BattleContext.new()
+	battle_context.battle_query = battle_query
+	battle_context.skill_service = skill_service
+	battle_context.pathfinding = pathfinding
+	battle_context.tile_map = tile_map
+	battle_context.units_container = units_container
+	_connect_signals()
+	if GameState.current_map_id != "":
+		call_deferred("start_battle", GameState.current_map_id)
+
+func _connect_signals() -> void:
 	if not InputManager.confirm_pressed.is_connected(_on_confirm):
 		InputManager.confirm_pressed.connect(_on_confirm)
 	if not InputManager.cancel_pressed.is_connected(_on_cancel):
@@ -87,8 +100,49 @@ func _ready() -> void:
 				preview_node.attack_confirmed.connect(_on_attack_confirmed)
 			if not preview_node.attack_cancelled.is_connected(_on_attack_cancelled):
 				preview_node.attack_cancelled.connect(_on_attack_cancelled)
-	if GameState.current_map_id != "":
-		call_deferred("start_battle", GameState.current_map_id)
+
+func _disconnect_signals() -> void:
+	if InputManager.confirm_pressed.is_connected(_on_confirm):
+		InputManager.confirm_pressed.disconnect(_on_confirm)
+	if InputManager.cancel_pressed.is_connected(_on_cancel):
+		InputManager.cancel_pressed.disconnect(_on_cancel)
+	if InputManager.move_cursor.is_connected(_on_move_cursor):
+		InputManager.move_cursor.disconnect(_on_move_cursor)
+	if is_instance_valid(battle_hud):
+		if battle_hud.end_turn_pressed.is_connected(_on_end_turn_pressed):
+			battle_hud.end_turn_pressed.disconnect(_on_end_turn_pressed)
+		if battle_hud.has_signal("save_pressed") and battle_hud.save_pressed.is_connected(_on_save_pressed):
+			battle_hud.save_pressed.disconnect(_on_save_pressed)
+		var action_menu_node = battle_hud.get_node("ActionMenu") if battle_hud.has_node("ActionMenu") else null
+		if action_menu_node:
+			if action_menu_node.move_selected.is_connected(_on_action_move):
+				action_menu_node.move_selected.disconnect(_on_action_move)
+			if action_menu_node.attack_selected.is_connected(_on_action_attack):
+				action_menu_node.attack_selected.disconnect(_on_action_attack)
+			if action_menu_node.skill_selected.is_connected(_on_action_skill):
+				action_menu_node.skill_selected.disconnect(_on_action_skill)
+			if action_menu_node.wait_selected.is_connected(_on_action_wait):
+				action_menu_node.wait_selected.disconnect(_on_action_wait)
+			if action_menu_node.switch_weapon_selected.is_connected(_on_action_switch_weapon):
+				action_menu_node.switch_weapon_selected.disconnect(_on_action_switch_weapon)
+		var preview_node = battle_hud.get_node("AttackPreview") if battle_hud.has_node("AttackPreview") else null
+		if preview_node:
+			if preview_node.attack_confirmed.is_connected(_on_attack_confirmed):
+				preview_node.attack_confirmed.disconnect(_on_attack_confirmed)
+			if preview_node.attack_cancelled.is_connected(_on_attack_cancelled):
+				preview_node.attack_cancelled.disconnect(_on_attack_cancelled)
+	if is_instance_valid(turn_manager):
+		if turn_manager.turn_started.is_connected(_on_turn_started):
+			turn_manager.turn_started.disconnect(_on_turn_started)
+		if turn_manager.round_ended.is_connected(_on_round_ended):
+			turn_manager.round_ended.disconnect(_on_round_ended)
+		if turn_manager.battle_check_requested.is_connected(_on_battle_check_requested):
+			turn_manager.battle_check_requested.disconnect(_on_battle_check_requested)
+		if turn_manager.checkpoint_requested.is_connected(_on_checkpoint_requested):
+			turn_manager.checkpoint_requested.disconnect(_on_checkpoint_requested)
+
+func _exit_tree() -> void:
+	_disconnect_signals()
 
 func start_battle(map_id: String) -> void:
 	if _battle_started_once:
@@ -100,17 +154,20 @@ func start_battle(map_id: String) -> void:
 		push_error("Map data not found: %s" % map_id)
 		return
 	_battle_started_once = true
-	_setup_tileset()
-	_apply_map_data()
+	map_setup_service.setup_tileset(tile_map)
+	map_setup_service.apply_map_data(tile_map, map_data, _update_tile_info)
 	_spawn_units()
 	if battle_query:
+		battle_context.map_data = map_data
 		battle_query.units_container = units_container
 		battle_query.pathfinding = pathfinding
 		battle_query.tile_map = tile_map
 		battle_query.map_data = map_data
+		pathfinding.initialize(battle_query)
+		combat_manager.initialize(battle_query)
 	if victory_judge:
 		victory_judge.setup(map_data)
-	turn_manager.initialize_battle(GameState.turn_number)
+	turn_manager.initialize_battle(GameState.turn_number, self)
 	if not turn_manager.turn_started.is_connected(_on_turn_started):
 		turn_manager.turn_started.connect(_on_turn_started)
 	if not turn_manager.round_ended.is_connected(_on_round_ended):
@@ -225,13 +282,13 @@ func _show_movement_range(unit) -> void:
 func _highlight_tiles(tiles: Array[Vector2i]) -> void:
 	if not highlight_tile_map:
 		return
-	highlight_tile_map.clear_layer(0)
+	highlight_tile_map.clear()
 	for tile in tiles:
 		highlight_tile_map.set_cell(0, tile, 0, Vector2i(1, 0))
 
 func _clear_highlights() -> void:
 	if highlight_tile_map:
-		highlight_tile_map.clear_layer(0)
+		highlight_tile_map.clear()
 	movement_tiles.clear()
 	attack_targets.clear()
 
@@ -353,25 +410,13 @@ func _on_attack_confirmed() -> void:
 	var weapon_id: String = selected_unit.runtime_state.equipped_weapon
 	if weapon_id == "":
 		return
-	var target: Node = pending_target
 	interaction_state = BattleInteractionState.IDLE
-	skill_service.apply_unit_passives(selected_unit, "before_combat")
-	skill_service.apply_unit_passives(target, "before_combat")
-	selected_unit.attack(target)
-	combat_manager.execute(selected_unit, target, weapon_id, skill_service)
-	_distribute_combat_exp(selected_unit, target)
-	skill_service.apply_unit_passives(selected_unit, "after_combat")
-	skill_service.apply_unit_passives(target, "after_combat")
-	skill_service.clear_temporary_passives(selected_unit)
-	skill_service.clear_temporary_passives(target)
+	combat_exec_service.execute_attack(selected_unit, pending_target, weapon_id, combat_manager, skill_service, battle_hud)
 	_clear_highlights()
 	attack_targets.clear()
 	pending_target = null
 	pending_combat_result = {}
 	selected_unit = null
-	if battle_hud and battle_hud.has_method("hide_attack_preview"):
-		battle_hud.hide_attack_preview()
-	_process_level_ups()
 	_check_battle_end()
 
 func _on_combat_finished(result: Dictionary) -> void:
@@ -380,7 +425,7 @@ func _on_combat_finished(result: Dictionary) -> void:
 	var attacker: Node = _find_unit_by_id(attacker_id)
 	var defender: Node = _find_unit_by_id(defender_id)
 	if attacker and defender:
-		_play_combat_effects(attacker, defender, result)
+		combat_exec_service.play_combat_effects(attacker, defender, result)
 
 func _find_unit_by_id(unit_id: String) -> Node:
 	for unit in units_container.get_children():
@@ -400,6 +445,24 @@ func _execute_action_complete() -> void:
 	_check_battle_end()
 	if battle_hud and battle_hud.has_method("hide_action_menu"):
 		battle_hud.hide_action_menu()
+
+func get_action_view_model(unit) -> Dictionary:
+	var can_move := unit.can_move()
+	var can_act := unit.can_act()
+	var has_ready_skill := false
+	if unit.runtime_state:
+		for skill_id in unit.runtime_state.skills:
+			var skill_data: Dictionary = DataManager.get_skill(skill_id)
+			if skill_data.get("type", "") == "active" and unit.runtime_state.can_use_skill(skill_id):
+				has_ready_skill = true
+				break
+	var weapon_count: int = unit.runtime_state.inventory.size() if unit.runtime_state else 0
+	return {
+		"can_move": can_move,
+		"can_act": can_act,
+		"has_ready_skill": has_ready_skill,
+		"weapon_count": weapon_count,
+	}
 
 func get_enemies_in_range(unit) -> Array:
 	var result: Array = []
@@ -505,55 +568,6 @@ func has_battle_ended() -> bool:
 func get_battle_result() -> String:
 	return check_victory_condition()
 
-func _play_combat_effects(attacker: Node, defender: Node, result: Dictionary) -> void:
-	attacker.play_animation("attack")
-	if result.get("did_crit", false):
-		_spawn_effect(_crit_effect, defender.global_position)
-	elif result.get("did_hit", false):
-		_spawn_effect(_hit_effect, defender.global_position)
-	if not defender.is_alive():
-		defender.play_animation("death")
-	var counter_result := result.get("did_counter", false)
-	if counter_result:
-		defender.play_animation("attack")
-		_spawn_effect(_hit_effect, attacker.global_position)
-
-func _spawn_effect(effect_scene: PackedScene, pos: Vector2) -> void:
-	var instance := effect_scene.instantiate()
-	instance.global_position = pos
-	units_container.add_child(instance)
-	if instance.has_method("play"):
-		instance.play()
-	if instance.has_signal("animation_finished"):
-		instance.animation_finished.connect(instance.queue_free, CONNECT_ONE_SHOT)
-	else:
-		get_tree().create_timer(1.5).timeout.connect(instance.queue_free)
-
-func _distribute_combat_exp(attacker: Node, defender: Node) -> void:
-	if not attacker.runtime_state or not defender.runtime_state:
-		return
-	var def_level: int = defender.runtime_state.level
-	var exp_gain: int = def_level * 10 + 20
-	if not defender.is_alive():
-		exp_gain += 20
-	var gained: Array[Dictionary] = attacker.runtime_state.gain_exp(exp_gain)
-	for lu in gained:
-		lu["unit_name"] = attacker.unit_id
-
-func _distribute_victory_exp() -> void:
-	for unit in units_container.get_children():
-		if unit.is_alive() and unit.team == "player" and unit.runtime_state:
-			var gained: Array[Dictionary] = unit.runtime_state.gain_exp(5)
-			for lu in gained:
-				lu["unit_name"] = unit.unit_id
-
-func _process_level_ups() -> void:
-	for unit in units_container.get_children():
-		if unit.runtime_state:
-			var pending: Array[Dictionary] = unit.runtime_state.pending_level_ups
-			if not pending.is_empty():
-				unit.runtime_state.pending_level_ups = []
-
 func _check_battle_end() -> bool:
 	var result := check_victory_condition()
 	if result != "":
@@ -565,8 +579,8 @@ func end_battle(result: String) -> void:
 	if GameState.current_phase == GameState.GamePhase.BATTLE_RESULT:
 		return
 	if result == "victory":
-		_distribute_victory_exp()
-	_process_level_ups()
+		combat_exec_service.distribute_victory_exp()
+	combat_exec_service.process_level_ups()
 	battle_lifecycle.finalize_battle(
 		result,
 		units_container,
@@ -589,8 +603,8 @@ func move_unit_to(unit: Node, target_pos: Vector2i) -> void:
 	if not unit:
 		return
 	unit.walk_to(target_pos)
-	if unit.runtime_state and unit.runtime_state.action_state == _urs_dep.ActionState.IDLE:
-		unit.runtime_state.action_state = _urs_dep.ActionState.MOVED
+	if unit.runtime_state and unit.runtime_state.action_state == GameConstants.ActionState.IDLE:
+		unit.runtime_state.action_state = GameConstants.ActionState.MOVED
 
 func get_enemy_units_for(unit: Node) -> Array:
 	if battle_query:
@@ -621,43 +635,6 @@ func get_distance(a: Vector2i, b: Vector2i) -> int:
 	if battle_query:
 		return battle_query.get_distance(a, b)
 	return abs(a.x - b.x) + abs(a.y - b.y)
-
-func _setup_tileset() -> void:
-	if not tile_map:
-		return
-	if tile_map.tile_set != null:
-		return
-	var tileset := TileSet.new()
-	var tile_paths := [
-		"res://assets/sprites/tiles/tile_plain.png",
-		"res://assets/sprites/tiles/tile_forest.png",
-		"res://assets/sprites/tiles/tile_mountain.png",
-	]
-	for path in tile_paths:
-		var tex := load(path) as Texture2D
-		if tex:
-			var atlas := TileSetAtlasSource.new()
-			atlas.texture = tex
-			atlas.texture_region_size = Vector2i(64, 64)
-			tileset.add_source(atlas, tileset.get_source_count())
-	tile_map.tile_set = tileset
-
-func _apply_map_data() -> void:
-	if not tile_map:
-		return
-	var width: int = map_data.get("width", 0)
-	var height: int = map_data.get("height", 0)
-	var tiles: Array = map_data.get("tiles", [])
-	tile_map.clear_layer(0)
-	if tile_map.tile_set == null:
-		_update_tile_info(Vector2i.ZERO)
-		return
-	for y in range(min(height, tiles.size())):
-		var row: Array = tiles[y]
-		for x in range(min(width, row.size())):
-			var tile_val := max(1, int(row[x]))
-			tile_map.set_cell(0, Vector2i(x, y), tile_val - 1, Vector2i(0, 0))
-	_update_tile_info(Vector2i.ZERO)
 
 func _update_tile_info(pos: Vector2i) -> void:
 	if not battle_hud:

@@ -11,6 +11,11 @@ const WEAPON_TRIANGLE := {
 	"axe": "lance",
 }
 
+var _battle_query: Node = null
+
+func initialize(battle_query: Node) -> void:
+	_battle_query = battle_query
+
 func simulate(attacker: Node, defender: Node, weapon_id: String) -> Dictionary:
 	var weapon_data: Dictionary = DataManager.get_weapon(weapon_id)
 	var result: Dictionary = _create_result(attacker, defender, weapon_id, weapon_data)
@@ -244,9 +249,8 @@ func _remove_sleep(unit: Node) -> void:
 	unit.runtime_state.status_effects = filtered
 
 func _get_terrain_bonus(unit: Node, key: String) -> int:
-	var scene := _get_battle_scene(unit)
-	if scene and scene.has_method("get_terrain_data_at"):
-		var terrain_data: Dictionary = scene.get_terrain_data_at(unit.grid_pos)
+	if _battle_query and _battle_query.has_method("get_terrain_data_at"):
+		var terrain_data: Dictionary = _battle_query.get_terrain_data_at(unit.grid_pos)
 		return int(terrain_data.get(key, 0))
 	return 0
 
@@ -254,9 +258,8 @@ func _get_height(unit: Node) -> int:
 	return _get_terrain_bonus(unit, "height")
 
 func _get_distance(attacker: Node, defender: Node) -> int:
-	var scene := _get_battle_scene(attacker)
-	if scene and scene.has_method("get_distance"):
-		return int(scene.get_distance(attacker.grid_pos, defender.grid_pos))
+	if _battle_query and _battle_query.has_method("get_distance"):
+		return int(_battle_query.get_distance(attacker.grid_pos, defender.grid_pos))
 	return abs(attacker.grid_pos.x - defender.grid_pos.x) + abs(attacker.grid_pos.y - defender.grid_pos.y)
 
 func _can_counter(attacker: Node, defender: Node, defender_weapon: Dictionary) -> bool:
@@ -290,13 +293,3 @@ func _calc_triangle_damage_bonus(attacker_type: String, defender_type: String) -
 	if WEAPON_TRIANGLE.get(defender_type, "") == attacker_type:
 		return -1
 	return 0
-
-func _get_battle_scene(node: Node) -> Node:
-	if not node:
-		return null
-	if not node.is_inside_tree():
-		return null
-	var tree := node.get_tree()
-	if not tree:
-		return null
-	return tree.current_scene

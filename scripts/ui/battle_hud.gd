@@ -2,8 +2,6 @@ extends CanvasLayer
 
 class_name BattleHUD
 
-const _unit_actor_dep := preload("res://scripts/unit/unit_actor.gd")
-
 signal end_turn_pressed()
 signal save_pressed()
 
@@ -61,10 +59,28 @@ func show_action_menu() -> void:
 	action_menu.show()
 
 func show_action_menu_for(unit) -> void:
-	if action_menu and action_menu.has_method("show_for_unit"):
+	if action_menu and action_menu.has_method("show_for_view_model"):
+		action_menu.show_for_view_model(_build_view_model(unit))
+	elif action_menu and action_menu.has_method("show_for_unit"):
 		action_menu.show_for_unit(unit)
 	else:
 		action_menu.show()
+
+func _build_view_model(unit) -> Dictionary:
+	if not unit or not unit.runtime_state:
+		return {"can_move": false, "can_act": false, "has_ready_skill": false, "weapon_count": 0}
+	var has_ready_skill := false
+	for skill_id in unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") == "active" and unit.runtime_state.can_use_skill(skill_id):
+			has_ready_skill = true
+			break
+	return {
+		"can_move": unit.can_move(),
+		"can_act": unit.can_act(),
+		"has_ready_skill": has_ready_skill,
+		"weapon_count": unit.runtime_state.inventory.size(),
+	}
 
 func hide_action_menu() -> void:
 	action_menu.hide()
@@ -79,6 +95,9 @@ func hide_attack_preview() -> void:
 	attack_preview.hide()
 
 func show_status_message(text: String) -> void:
+	turn_label.text = text
+
+func show_message(text: String) -> void:
 	turn_label.text = text
 
 func _phase_to_text(phase: String) -> String:

@@ -2,8 +2,6 @@ extends Node2D
 
 class_name UnitActor
 
-const _urs_dep := preload("res://scripts/unit/unit_runtime_state.gd")
-
 signal moved(new_pos: Vector2i)
 signal attacked(target: Node)
 signal damaged(amount: int)
@@ -40,7 +38,7 @@ func walk_to(target: Vector2i) -> void:
 	moved.emit(target)
 
 func is_alive() -> bool:
-	return _is_alive and runtime_state != null and runtime_state.action_state != _urs_dep.ActionState.DEAD
+	return _is_alive and runtime_state != null and runtime_state.action_state != GameConstants.ActionState.DEAD
 
 func get_current_hp() -> int:
 	return runtime_state.current_hp if runtime_state else 0
@@ -53,7 +51,7 @@ func setup(id: String, unit_team: String, pos: Vector2i) -> void:
 	team = unit_team
 	grid_pos = pos
 	position = Vector2(pos.x * 64, pos.y * 64)
-	runtime_state = _urs_dep.new()
+	runtime_state = UnitRuntimeState.new()
 	runtime_state.setup_from_template(id)
 	add_child(runtime_state)
 	add_to_group("units")
@@ -80,22 +78,22 @@ func _load_sprite(id: String, unit_team: String) -> void:
 
 func reset_action_state() -> void:
 	if runtime_state:
-		runtime_state.action_state = _urs_dep.ActionState.IDLE
+		runtime_state.action_state = GameConstants.ActionState.IDLE
 
 func can_move() -> bool:
-	return runtime_state and runtime_state.action_state == _urs_dep.ActionState.IDLE
+	return runtime_state and runtime_state.action_state == GameConstants.ActionState.IDLE
 
 func can_act() -> bool:
-	return runtime_state and runtime_state.action_state in [_urs_dep.ActionState.IDLE, _urs_dep.ActionState.MOVED]
+	return runtime_state and runtime_state.action_state in [GameConstants.ActionState.IDLE, GameConstants.ActionState.MOVED]
 
 func attack(target: Node) -> void:
 	if runtime_state:
-		runtime_state.action_state = _urs_dep.ActionState.ACTED
+		runtime_state.action_state = GameConstants.ActionState.ACTED
 	attacked.emit(target)
 
 func wait() -> void:
 	if runtime_state:
-		runtime_state.action_state = _urs_dep.ActionState.ACTED
+		runtime_state.action_state = GameConstants.ActionState.ACTED
 
 func take_damage(amount: int) -> void:
 	if not runtime_state:
@@ -115,7 +113,7 @@ func heal(amount: int) -> void:
 func die() -> void:
 	_is_alive = false
 	if runtime_state:
-		runtime_state.action_state = _urs_dep.ActionState.DEAD
+		runtime_state.action_state = GameConstants.ActionState.DEAD
 	died.emit()
 
 func to_save_dict() -> Dictionary:
@@ -147,4 +145,4 @@ func apply_saved_state(data: Dictionary) -> void:
 	_is_alive = bool(data.get("is_alive", true))
 	if not _is_alive and runtime_state:
 		runtime_state.current_hp = 0
-		runtime_state.action_state = _urs_dep.ActionState.DEAD
+		runtime_state.action_state = GameConstants.ActionState.DEAD

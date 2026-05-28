@@ -104,6 +104,7 @@ func run() -> Dictionary:
 		all_pass = false
 
 	var ai := preload("res://scripts/battle/ai_controller.gd").new()
+	ai.initialize(null)
 	var unit_scene := preload("res://scenes/battle/unit/unit.tscn")
 
 	var mock_attacker = unit_scene.instantiate()
