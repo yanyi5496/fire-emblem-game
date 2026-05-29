@@ -235,8 +235,7 @@ func _calc_hit_value(attacker: Node, defender: Node, weapon_data: Dictionary, tr
 func _unit_has_tag(unit: Node, tag: String) -> bool:
 	if not unit or not unit.runtime_state:
 		return false
-	var tags: Array = unit.runtime_state.get("tags", [])
-	return tag in tags
+	return tag in unit.runtime_state.tags
 
 func _remove_sleep(unit: Node) -> void:
 	if not unit or not unit.runtime_state:

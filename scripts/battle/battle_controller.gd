@@ -102,6 +102,8 @@ func _connect_signals() -> void:
 				preview_node.attack_cancelled.connect(_on_attack_cancelled)
 
 func _disconnect_signals() -> void:
+	if combat_manager and combat_manager.combat_finished.is_connected(_on_combat_finished):
+		combat_manager.combat_finished.disconnect(_on_combat_finished)
 	if InputManager.confirm_pressed.is_connected(_on_confirm):
 		InputManager.confirm_pressed.disconnect(_on_confirm)
 	if InputManager.cancel_pressed.is_connected(_on_cancel):
@@ -308,8 +310,8 @@ func _start_movement() -> void:
 		battle_hud.show_action_menu()
 
 func _cancel_movement() -> void:
-	_clear_highlights()
-	interaction_state = BattleInteractionState.ACTION_MENU
+	interaction_state = BattleInteractionState.UNIT_SELECTED
+	_show_movement_range(selected_unit)
 
 func _cancel_to_unit_select() -> void:
 	interaction_state = BattleInteractionState.UNIT_SELECTED

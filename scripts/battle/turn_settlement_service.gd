@@ -1,3 +1,5 @@
+extends RefCounted
+
 class_name TurnSettlementService
 
 var _status_effect_service = null

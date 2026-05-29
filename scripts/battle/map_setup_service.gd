@@ -1,3 +1,5 @@
+extends RefCounted
+
 class_name MapSetupService
 
 func setup_tileset(tile_map: TileMap) -> void:

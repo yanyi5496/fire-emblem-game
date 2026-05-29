@@ -1,3 +1,5 @@
+extends RefCounted
+
 class_name BattleContext
 
 var battle_query: Node = null

@@ -20,6 +20,8 @@ func initialize(battle_controller: Node) -> void:
 	_battle_controller = battle_controller
 
 func _get_combat_manager():
+	if _battle_controller and _battle_controller.combat_manager:
+		return _battle_controller.combat_manager
 	if _combat_manager == null:
 		_combat_manager = CombatManager.new()
 		if _battle_controller and _battle_controller.battle_query:
@@ -226,17 +228,20 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 				if not unit.runtime_state.can_equip_weapon_type(weapon_type):
 					unit.wait()
 					return
-				var active_skill_service = _get_skill_service_from_controller()
-				if active_skill_service:
-					active_skill_service.apply_unit_passives(unit, "before_combat")
-					active_skill_service.apply_unit_passives(target, "before_combat")
-				unit.attack(target)
-				_get_combat_manager().execute(unit, target, weapon_id, active_skill_service)
-				if active_skill_service:
-					active_skill_service.apply_unit_passives(unit, "after_combat")
-					active_skill_service.apply_unit_passives(target, "after_combat")
-					active_skill_service.clear_temporary_passives(unit)
-					active_skill_service.clear_temporary_passives(target)
+				if _battle_controller and _battle_controller.combat_exec_service:
+					_battle_controller.combat_exec_service.execute_attack(unit, target, weapon_id, _get_combat_manager(), _get_skill_service_from_controller(), _battle_controller.battle_hud)
+				else:
+					var active_skill_service = _get_skill_service_from_controller()
+					if active_skill_service:
+						active_skill_service.apply_unit_passives(unit, "before_combat")
+						active_skill_service.apply_unit_passives(target, "before_combat")
+					unit.attack(target)
+					_get_combat_manager().execute(unit, target, weapon_id, active_skill_service)
+					if active_skill_service:
+						active_skill_service.apply_unit_passives(unit, "after_combat")
+						active_skill_service.apply_unit_passives(target, "after_combat")
+						active_skill_service.clear_temporary_passives(unit)
+						active_skill_service.clear_temporary_passives(target)
 			else:
 				unit.wait()
 		"self_buff":

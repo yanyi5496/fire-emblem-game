@@ -244,6 +244,10 @@ func _exit_tree() -> void:
 		InputManager.confirm_pressed.disconnect(_on_confirm_pressed)
 	if is_instance_valid(dialogue_box) and dialogue_box.gui_input.is_connected(_on_dialogue_box_gui_input):
 		dialogue_box.gui_input.disconnect(_on_dialogue_box_gui_input)
+	if is_instance_valid(_cg_overlay) and _cg_overlay.gui_input.is_connected(_on_cg_gui_input):
+		_cg_overlay.gui_input.disconnect(_on_cg_gui_input)
+	if story_finished.is_connected(_on_post_battle_story_end):
+		story_finished.disconnect(_on_post_battle_story_end)
 
 func _on_post_battle_story_end() -> void:
 	var flow: Dictionary = DataManager.get_map(GameState.current_map_id) if GameState.current_map_id != "" else {}

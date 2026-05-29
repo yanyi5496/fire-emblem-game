@@ -1,3 +1,5 @@
+extends RefCounted
+
 class_name CombatExecService
 
 var _units_container: Node2D = null

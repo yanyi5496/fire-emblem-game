@@ -92,10 +92,10 @@ func _reset_unit_states() -> void:
 			unit.reset_action_state()
 
 func _process_passive_triggers(trigger_type: String) -> void:
-	if not battle_controller or not battle_controller.has_method("skill_service"):
+	if not battle_controller:
 		return
 	var ss = battle_controller.skill_service
-	if not ss or not ss.has_method("apply_unit_passives"):
+	if not ss:
 		return
 	var units := get_tree().get_nodes_in_group("units")
 	_settlement_service.process_passive_triggers(units, trigger_type, ss)
