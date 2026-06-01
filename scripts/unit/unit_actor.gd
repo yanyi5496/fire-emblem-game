@@ -128,7 +128,10 @@ func die() -> void:
 	died.emit()
 	_update_hp_bar()
 	_update_state_marker()
-	visible = false
+	if sprite and is_instance_valid(sprite):
+		var tween := create_tween()
+		tween.tween_property(sprite, "modulate:a", 0.0, 0.6)
+		tween.tween_callback(_hide_after_death)
 
 func to_save_dict() -> Dictionary:
 	return {
@@ -163,6 +166,10 @@ func apply_saved_state(data: Dictionary) -> void:
 		visible = false
 	_update_hp_bar()
 	_update_state_marker()
+
+func _hide_after_death() -> void:
+	if is_instance_valid(self):
+		visible = false
 
 func _update_hp_bar() -> void:
 	if not hp_bar_fill or not hp_bar_bg:

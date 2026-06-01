@@ -30,6 +30,8 @@ func _get_combat_manager():
 
 func execute_turn(units: Array[Node]) -> void:
 	for unit in units:
+		if not is_instance_valid(unit):
+			continue
 		if not unit.is_alive():
 			continue
 		if unit.runtime_state.action_state != GameConstants.ActionState.IDLE:

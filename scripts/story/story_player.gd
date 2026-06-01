@@ -210,17 +210,26 @@ func _show_choices() -> void:
 		if line.get("type", _story_parser_dep.LineType.UNKNOWN) != _story_parser_dep.LineType.DIALOGUE:
 			break
 		_current_index += 1
+		var content: String = line.get("content", "")
+		var flag_key := ""
+		if content.find("|") > 0:
+			var parts := content.split("|", false, 1)
+			content = parts[0].strip_edges()
+			flag_key = parts[1].strip_edges() if parts.size() > 1 else ""
 		var btn := Button.new()
-		btn.text = line.get("content", "")
+		btn.text = content
 		var ci := choice_index
-		btn.pressed.connect(func(): _on_choice_selected(ci))
+		var fk := flag_key
+		btn.pressed.connect(func(): _on_choice_selected(ci, fk))
 		choice_container.add_child(btn)
 		choice_index += 1
 
-func _on_choice_selected(index: int) -> void:
+func _on_choice_selected(index: int, flag_key: String = "") -> void:
 	for child in choice_container.get_children():
 		child.queue_free()
 	choice_container.hide()
+	if flag_key != "":
+		GameState.story_flags[flag_key] = true
 	choice_made.emit(index)
 	_advance()
 

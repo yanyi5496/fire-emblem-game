@@ -8,6 +8,9 @@ var _mode := "load"
 
 func _ready() -> void:
 	GameState.set_phase(GameState.GamePhase.SAVE_LOAD)
+	if GameState.story_flags.get("_loading_mode", false):
+		_mode = "load"
+		GameState.story_flags.erase("_loading_mode")
 	_build_slot_list()
 
 func set_mode(mode: String) -> void:

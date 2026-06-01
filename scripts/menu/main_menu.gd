@@ -18,11 +18,8 @@ func _on_new_game_pressed() -> void:
 	SceneRouter.goto(DEFAULT_STORY_SCENE)
 
 func _on_continue_pressed() -> void:
-	if SaveManager.load_game(1).is_empty():
-		return
-	var next_scene := GameState.get_resume_scene()
-	if next_scene != "main_menu":
-		SceneRouter.goto(next_scene)
+	GameState.story_flags["_loading_mode"] = true
+	SceneRouter.goto("save_load")
 
 func _on_settings_pressed() -> void:
 	SceneRouter.goto("settings")
