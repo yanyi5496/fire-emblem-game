@@ -1,0 +1,15 @@
+{
+  "id": "sage",
+  "name": "贤者",
+  "tier": 2,
+  "promotes_to": "",
+  "weapons": ["staff", "magic"],
+  "mov": 5,
+  "growth_bonus": {
+    "mp": 15,
+    "mag": 10,
+    "res": 10
+  },
+  "terrain_adaptation": {},
+  "skills": ["heal_light"]
+}

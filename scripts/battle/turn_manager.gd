@@ -13,6 +13,7 @@ enum Phase { PLAYER, ENEMY, NPC, ROUND_END }
 var current_phase: Phase = Phase.PLAYER
 var turn_number: int = 1
 var ai_controller
+var npc_ai_controller = null
 var battle_controller: Node = null
 var _settlement_service: TurnSettlementService = null
 
@@ -24,6 +25,10 @@ func initialize_battle(starting_turn: int = 1, controller: Node = null) -> void:
 	add_child(ai_controller)
 	if battle_controller:
 		ai_controller.initialize(battle_controller)
+	npc_ai_controller = AIController.new()
+	add_child(npc_ai_controller)
+	if battle_controller:
+		npc_ai_controller.initialize(battle_controller)
 	_settlement_service = TurnSettlementService.new()
 
 func start_turn(phase_name: String) -> void:
@@ -42,6 +47,8 @@ func start_turn(phase_name: String) -> void:
 	_process_passive_triggers("turn_start")
 	if phase_name == "enemy":
 		_execute_enemy_turn()
+	elif phase_name == "npc":
+		_execute_npc_turn()
 
 func _execute_enemy_turn() -> void:
 	var enemy_units: Array[Node] = []
@@ -49,6 +56,18 @@ func _execute_enemy_turn() -> void:
 		if unit.team == "enemy" and unit.is_alive():
 			enemy_units.append(unit)
 	ai_controller.execute_turn(enemy_units)
+	battle_check_requested.emit()
+	if has_battle_ended():
+		return
+	_execute_round_end()
+
+func _execute_npc_turn() -> void:
+	var npc_units: Array[Node] = []
+	for unit in get_tree().get_nodes_in_group("units"):
+		if unit.team == "npc" and unit.is_alive():
+			npc_units.append(unit)
+	if not npc_units.is_empty() and npc_ai_controller:
+		npc_ai_controller.execute_turn(npc_units)
 	battle_check_requested.emit()
 	if has_battle_ended():
 		return

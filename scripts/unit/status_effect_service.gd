@@ -64,6 +64,17 @@ func has_effect(unit, effect_type: String) -> bool:
 			return true
 	return false
 
+func is_paralyzed(unit) -> bool:
+	if not has_effect(unit, "paralysis"):
+		return false
+	return randi() % 100 < 50
+
+func is_asleep(unit) -> bool:
+	return has_effect(unit, "sleep")
+
+func is_silenced(unit) -> bool:
+	return has_effect(unit, "silence")
+
 func _apply_poison(unit) -> void:
 	var dmg: int = max(1, unit.runtime_state.max_hp / 10)
 	unit.take_damage(dmg)
@@ -71,6 +82,11 @@ func _apply_poison(unit) -> void:
 func apply_poison_tick(unit) -> void:
 	if has_effect(unit, "poison"):
 		_apply_poison(unit)
+
+func apply_sleep_wake_check(unit) -> void:
+	if has_effect(unit, "sleep"):
+		if randi() % 100 < 40:
+			remove_effect(unit, "sleep")
 
 func _is_control_type(type: String) -> bool:
 	return type in ["sleep", "paralysis"]

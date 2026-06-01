@@ -1,0 +1,14 @@
+{
+  "id": "silver_lance",
+  "name": "银枪",
+  "type": "lance",
+  "might": 9,
+  "hit": 80,
+  "crit": 3,
+  "weight": 5,
+  "min_range": 1,
+  "max_range": 1,
+  "durability": 25,
+  "effective_tags": [],
+  "is_magic": false
+}

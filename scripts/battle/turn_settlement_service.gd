@@ -10,6 +10,7 @@ func _init() -> void:
 func process_round_end(units: Array) -> void:
 	process_debuff_ticks(units)
 	process_poison_damage(units)
+	process_sleep_wake_checks(units)
 	process_auto_heal(units)
 	process_skill_cooldowns(units)
 
@@ -22,6 +23,11 @@ func process_poison_damage(units: Array) -> void:
 	for unit in units:
 		if unit.is_alive():
 			_status_effect_service.apply_poison_tick(unit)
+
+func process_sleep_wake_checks(units: Array) -> void:
+	for unit in units:
+		if unit.is_alive():
+			_status_effect_service.apply_sleep_wake_check(unit)
 
 func process_auto_heal(units: Array) -> void:
 	for unit in units:

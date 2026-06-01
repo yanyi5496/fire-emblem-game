@@ -37,6 +37,10 @@ func get_target_group(skill_id: String) -> String:
 			return "enemy"
 		"stat_bonus":
 			return "self"
+		"aura":
+			return "ally"
+		"counter":
+			return "self"
 		_:
 			return ""
 
@@ -169,11 +173,9 @@ func execute_skill(unit, target, skill_id: String) -> Dictionary:
 		"stat_bonus":
 			result = _execute_stat_bonus(unit, target if target else unit, skill_id, skill_data, effect)
 		"aura":
-			push_warning("Aura skill not yet implemented: %s" % skill_id)
-			return {"success": false, "message": ""}
+			result = _execute_aura(unit, skill_id, skill_data, effect)
 		"counter":
-			push_warning("Counter skill not yet implemented: %s" % skill_id)
-			return {"success": false, "message": ""}
+			result = _execute_counter(unit, skill_id, skill_data, effect)
 		_:
 			return {"success": false, "message": ""}
 	if result.get("success", false):
@@ -216,12 +218,19 @@ func _execute_damage(unit, target, skill_id: String, effect: Dictionary) -> Dict
 	target.take_damage(final_damage)
 	unit.runtime_state.trigger_skill_cooldown(skill_id)
 	unit.wait()
-	return {
+	var result_dict: Dictionary = {
 		"success": true,
 		"action": "skill",
 		"message": "%s 对 %s 造成了 %d 点伤害" % [unit.unit_id, target.unit_id, final_damage],
 		"damage": final_damage,
 	}
+	if str(effect.get("apply_effect", "")) != "" and target.runtime_state:
+		var effect_id: String = str(effect.get("apply_effect", ""))
+		var effect_duration: int = int(effect.get("effect_duration", 3))
+		var ses := StatusEffectService.new()
+		ses.add_effect(target, effect_id, effect_duration)
+		result_dict["message"] += "（附加%s）" % effect_id
+	return result_dict
 
 func _execute_stat_bonus(unit, target, skill_id: String, skill_data: Dictionary, effect: Dictionary) -> Dictionary:
 	if not target or not target.runtime_state:

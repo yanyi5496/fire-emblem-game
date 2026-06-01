@@ -1,0 +1,14 @@
+{
+  "id": "silver_bow",
+  "name": "银弓",
+  "type": "bow",
+  "might": 7,
+  "hit": 85,
+  "crit": 5,
+  "weight": 3,
+  "min_range": 2,
+  "max_range": 3,
+  "durability": 20,
+  "effective_tags": ["flying"],
+  "is_magic": false
+}

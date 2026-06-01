@@ -42,10 +42,11 @@ func execute_turn(units: Array[Node]) -> void:
 func _is_disabled(unit: Node) -> bool:
 	if not unit.runtime_state:
 		return true
-	for e in unit.runtime_state.status_effects:
-		var eid: String = str(e.get("id", ""))
-		if eid in ["sleep", "paralysis"] and e.get("duration", 0) > 0:
-			return true
+	var ses := StatusEffectService.new()
+	if ses.is_asleep(unit):
+		return true
+	if ses.is_paralyzed(unit):
+		return true
 	return false
 
 func _decide_action(unit: Node) -> Dictionary:

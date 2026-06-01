@@ -1,0 +1,14 @@
+{
+  "id": "silver_sword",
+  "name": "银剑",
+  "type": "sword",
+  "might": 8,
+  "hit": 85,
+  "crit": 5,
+  "weight": 4,
+  "min_range": 1,
+  "max_range": 1,
+  "durability": 25,
+  "effective_tags": [],
+  "is_magic": false
+}

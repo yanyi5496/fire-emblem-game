@@ -197,6 +197,7 @@ func _apply_result(result: Dictionary, skill_service = null) -> void:
 			_remove_sleep(attacker)
 			if skill_service:
 				skill_service.apply_unit_passives(attacker, "on_damage")
+	_try_counter_stance(defender, attacker, result)
 	if not attacker.is_alive():
 		result["applied_effects"].append("attacker_killed")
 		if skill_service:
@@ -246,6 +247,28 @@ func _remove_sleep(unit: Node) -> void:
 		if str(e.get("id", "")) != "sleep":
 			filtered.append(e)
 	unit.runtime_state.status_effects = filtered
+
+func _try_counter_stance(defender: Node, attacker: Node, result: Dictionary) -> void:
+	if not defender or not defender.runtime_state:
+		return
+	var stance_idx := -1
+	for i in range(defender.runtime_state.status_effects.size()):
+		var e: Dictionary = defender.runtime_state.status_effects[i]
+		if str(e.get("id", "")) == "counter_stance":
+			stance_idx = i
+			break
+	if stance_idx < 0:
+		return
+	var stance: Dictionary = defender.runtime_state.status_effects[stance_idx]
+	var chance: int = int(stance.get("counter_chance", 30))
+	var dmg_pct: float = float(stance.get("damage_percent", 50)) / 100.0
+	defender.runtime_state.status_effects.remove_at(stance_idx)
+	if randi() % 100 < chance:
+		var counter_dmg: int = int(result.get("damage", 0) * dmg_pct)
+		if counter_dmg > 0:
+			attacker.take_damage(counter_dmg)
+			result["counter_stance_triggered"] = true
+			result["counter_stance_damage"] = counter_dmg
 
 func _get_terrain_bonus(unit: Node, key: String) -> int:
 	if _battle_query and _battle_query.has_method("get_terrain_data_at"):

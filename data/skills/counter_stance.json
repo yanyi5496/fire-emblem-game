@@ -1,0 +1,20 @@
+{
+  "id": "counter_stance",
+  "name": "反击姿态",
+  "type": "active",
+  "cost": {
+    "mp": 4
+  },
+  "effect": {
+    "type": "counter",
+    "chance": 40,
+    "damage_percent": 50
+  },
+  "cooldown": 5,
+  "range": {
+    "min": 0,
+    "max": 0
+  },
+  "description": "主动使用，本回合被攻击时40%概率反击，造成伤害50%",
+  "priority": 70
+}

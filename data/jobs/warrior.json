@@ -1,0 +1,18 @@
+{
+  "id": "warrior",
+  "name": "勇者",
+  "tier": 2,
+  "promotes_to": "",
+  "weapons": ["axe", "sword"],
+  "mov": 5,
+  "growth_bonus": {
+    "hp": 10,
+    "str": 10,
+    "def": 5
+  },
+  "terrain_adaptation": {
+    "forest": 1,
+    "mountain": 2
+  },
+  "skills": ["tough_body"]
+}

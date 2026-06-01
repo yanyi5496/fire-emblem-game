@@ -1,0 +1,17 @@
+{
+  "id": "swordmaster",
+  "name": "剑圣",
+  "tier": 2,
+  "promotes_to": "",
+  "weapons": ["sword"],
+  "mov": 6,
+  "growth_bonus": {
+    "str": 5,
+    "skl": 15,
+    "spd": 15
+  },
+  "terrain_adaptation": {
+    "forest": 1
+  },
+  "skills": ["sword_adept"]
+}

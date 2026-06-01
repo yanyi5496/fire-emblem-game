@@ -1,0 +1,19 @@
+{
+  "id": "heal_wind",
+  "name": "治愈之风",
+  "type": "active",
+  "cost": {
+    "mp": 8
+  },
+  "effect": {
+    "type": "heal",
+    "value": 15
+  },
+  "cooldown": 3,
+  "range": {
+    "min": 1,
+    "max": 2
+  },
+  "description": "主动使用，恢复范围内友方15HP",
+  "priority": 50
+}

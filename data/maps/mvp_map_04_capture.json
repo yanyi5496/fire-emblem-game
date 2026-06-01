@@ -1,0 +1,54 @@
+{
+  "id": "mvp_map_04_capture",
+  "name": "据点争夺战",
+  "width": 10,
+  "height": 10,
+  "tiles": [
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,2,1,1,1,1,2,1,1],
+    [1,1,2,1,5,5,1,2,1,1],
+    [1,1,1,1,5,5,1,1,1,1],
+    [1,2,1,1,1,1,1,1,2,1],
+    [1,2,1,1,1,1,1,1,2,1],
+    [1,1,1,1,5,5,1,1,1,1],
+    [1,1,2,1,5,5,1,2,1,1],
+    [1,1,2,1,1,1,1,2,1,1],
+    [1,1,1,1,1,1,1,1,1,1]
+  ],
+  "terrain_ids": [
+    ["plain","plain","plain","plain","plain","plain","plain","plain","plain","plain"],
+    ["plain","plain","forest","plain","plain","plain","plain","forest","plain","plain"],
+    ["plain","plain","forest","plain","castle","castle","plain","forest","plain","plain"],
+    ["plain","plain","plain","plain","castle","castle","plain","plain","plain","plain"],
+    ["plain","forest","plain","plain","plain","plain","plain","plain","forest","plain"],
+    ["plain","forest","plain","plain","plain","plain","plain","plain","forest","plain"],
+    ["plain","plain","plain","plain","castle","castle","plain","plain","plain","plain"],
+    ["plain","plain","forest","plain","castle","castle","plain","forest","plain","plain"],
+    ["plain","plain","forest","plain","plain","plain","plain","forest","plain","plain"],
+    ["plain","plain","plain","plain","plain","plain","plain","plain","plain","plain"]
+  ],
+  "terrain_defs": {
+    "plain": {"move_cost": 1, "avoid_bonus": 0, "defense_bonus": 0, "walkable": true, "height": 0},
+    "forest": {"move_cost": 2, "avoid_bonus": 15, "defense_bonus": 1, "walkable": true, "height": 1},
+    "mountain": {"move_cost": 3, "avoid_bonus": 10, "defense_bonus": 2, "walkable": true, "height": 2},
+    "river": {"move_cost": 0, "avoid_bonus": 0, "defense_bonus": 0, "walkable": false, "height": -1},
+    "castle": {"move_cost": 1, "avoid_bonus": 5, "defense_bonus": 3, "walkable": true, "height": 1},
+    "indoor": {"move_cost": 1, "avoid_bonus": 0, "defense_bonus": 0, "walkable": true, "height": 0},
+    "volcano": {"move_cost": 2, "avoid_bonus": -10, "defense_bonus": 0, "walkable": true, "height": 1},
+    "snow": {"move_cost": 2, "avoid_bonus": 5, "defense_bonus": 0, "walkable": true, "height": 0}
+  },
+  "units": [
+    {"unit_id": "hero_001", "x": 2, "y": 1, "team": "player"},
+    {"unit_id": "hero_002", "x": 1, "y": 2, "team": "player"},
+    {"unit_id": "enemy_001", "x": 7, "y": 8, "team": "enemy"},
+    {"unit_id": "enemy_002", "x": 8, "y": 7, "team": "enemy"},
+    {"unit_id": "enemy_001", "x": 9, "y": 8, "team": "enemy"}
+  ],
+  "victory_condition": "capture",
+  "capture_points": [
+    {"id": "north_fort", "x": 4, "y": 2},
+    {"id": "south_fort", "x": 4, "y": 7}
+  ],
+  "defeat_condition": "all_dead",
+  "max_turns": 25
+}

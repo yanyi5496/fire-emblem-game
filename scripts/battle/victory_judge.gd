@@ -21,6 +21,9 @@ func check_victory(enemy_alive: bool, player_alive: bool, turn_number: int, lord
 					return "victory"
 			"escape":
 				return _check_escape_victory(lord_alive, lord_on_escape, all_on_escape)
+			"capture":
+				if _check_capture_victory(capture_points):
+					return "victory"
 			_:
 				if not enemy_alive:
 					return "victory"
@@ -41,6 +44,17 @@ func _check_escape_victory(lord_alive: bool, lord_on_escape: bool, all_on_escape
 			return ""
 		_:
 			return ""
+
+func _check_capture_victory(capture_points: Dictionary) -> bool:
+	var capture_required: Array = map_data.get("capture_points", [])
+	if capture_required.is_empty():
+		return false
+	var all_captured := true
+	for point_id in capture_required:
+		if not capture_points.get(str(point_id), false):
+			all_captured = false
+			break
+	return all_captured
 
 func has_battle_ended(enemy_alive: bool, player_alive: bool, turn_number: int) -> bool:
 	return check_victory(enemy_alive, player_alive, turn_number) != ""

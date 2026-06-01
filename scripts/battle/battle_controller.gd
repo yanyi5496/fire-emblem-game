@@ -544,6 +544,8 @@ func check_victory_condition() -> String:
 	var lord_on_escape := false
 	var all_on_escape := false
 	var escape_count := 0
+	var capture_points: Dictionary = {}
+	var capture_point_defs: Array = map_data.get("capture_points", [])
 	for unit in units_container.get_children():
 		if lord_id != "" and unit.runtime_state and unit.runtime_state.template_id == lord_id:
 			lord_alive = unit.is_alive()
@@ -555,6 +557,10 @@ func check_victory_condition() -> String:
 						escape_count += 1
 						if lord_id != "" and unit.runtime_state and unit.runtime_state.template_id == lord_id:
 							lord_on_escape = true
+					for cp_def in capture_point_defs:
+						var cp_pos: Vector2i = Vector2i(int(cp_def.get("x", 0)), int(cp_def.get("y", 0)))
+						if unit.grid_pos == cp_pos and unit.team == "player":
+							capture_points[str(cp_def.get("id", ""))] = true
 				"enemy": enemy_alive = true
 	if not escape_points.is_empty() and escape_count > 0:
 		var player_unit_count := 0
@@ -562,7 +568,7 @@ func check_victory_condition() -> String:
 			if unit.is_alive() and unit.team == "player":
 				player_unit_count += 1
 		all_on_escape = escape_count >= player_unit_count
-	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number, lord_alive, lord_on_escape, all_on_escape)
+	return victory_judge.check_victory(enemy_alive, player_alive, turn_manager.turn_number, lord_alive, lord_on_escape, all_on_escape, capture_points)
 
 func has_battle_ended() -> bool:
 	return check_victory_condition() != ""

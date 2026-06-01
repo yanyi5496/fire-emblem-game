@@ -2,6 +2,8 @@ extends RefCounted
 
 class_name CombatExecService
 
+signal level_up_notification(unit_id: String, stats: Dictionary)
+
 var _units_container: Node2D = null
 var _hit_effect: PackedScene = null
 var _crit_effect: PackedScene = null
@@ -49,6 +51,7 @@ func process_level_ups() -> void:
 			var pending: Array[Dictionary] = unit.runtime_state.pending_level_ups
 			if not pending.is_empty():
 				unit.runtime_state.pending_level_ups = []
+				level_up_notification.emit(unit.unit_id, pending[0] if not pending.is_empty() else {})
 
 func execute_attack(selected_unit: Node, pending_target: Node, weapon_id: String, combat_manager, skill_service, battle_hud: Node) -> void:
 	if not selected_unit or not pending_target:

@@ -180,14 +180,23 @@ func _show_character(name: String, expression: String) -> void:
 	else:
 		portrait_texture.texture = null
 
+var _is_typing := false
+var _full_text := ""
+var _type_index := 0
+var _type_speed := 0.03
+
 func _show_dialogue(text: String) -> void:
 	if _is_narrator_mode:
 		character_name_label.text = ""
 		portrait_texture.texture = null
 	elif _current_character != "":
 		character_name_label.text = _current_character
-	dialogue_text.text = text
+	_full_text = text
+	_type_index = 0
+	_is_typing = true
+	dialogue_text.text = ""
 	dialogue_box.show()
+	_start_typewriter()
 
 func _show_choices() -> void:
 	for child in choice_container.get_children():
@@ -215,6 +224,9 @@ func _on_choice_selected(index: int) -> void:
 
 func _on_confirm_pressed() -> void:
 	if GameState.current_phase != GameState.GamePhase.STORY:
+		return
+	if _is_typing:
+		_finish_typewriter()
 		return
 	if _waiting_for_cg:
 		_close_cg()
@@ -293,6 +305,24 @@ func _name_to_portrait_id(display_name: String) -> String:
 		"琳娜": return "hero_002"
 		"山贼头目": return "enemy_002"
 		_: return display_name
+
+func _start_typewriter() -> void:
+	advance_typewriter()
+
+func advance_typewriter() -> void:
+	if not _is_typing:
+		return
+	if _type_index >= _full_text.length():
+		_is_typing = false
+		dialogue_text.text = _full_text
+		return
+	_type_index += 1
+	dialogue_text.text = _full_text.substr(0, _type_index)
+	get_tree().create_timer(_type_speed).timeout.connect(advance_typewriter)
+
+func _finish_typewriter() -> void:
+	_is_typing = false
+	dialogue_text.text = _full_text
 
 func _finish() -> void:
 	_lines.clear()

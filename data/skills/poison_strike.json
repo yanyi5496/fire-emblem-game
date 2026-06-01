@@ -1,0 +1,23 @@
+{
+  "id": "poison_strike",
+  "name": "毒击",
+  "type": "active",
+  "cost": {
+    "mp": 3
+  },
+  "effect": {
+    "type": "damage",
+    "stat": "str",
+    "value": 4,
+    "magic": false,
+    "apply_effect": "poison",
+    "effect_duration": 3
+  },
+  "cooldown": 4,
+  "range": {
+    "min": 1,
+    "max": 1
+  },
+  "description": "主动使用，对敌人造成伤害并附加中毒3回合",
+  "priority": 65
+}

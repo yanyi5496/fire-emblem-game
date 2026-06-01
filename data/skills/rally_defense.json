@@ -1,0 +1,25 @@
+{
+  "id": "rally_defense",
+  "name": "防守号令",
+  "type": "active",
+  "cost": {
+    "mp": 5
+  },
+  "effect": {
+    "type": "aura",
+    "range": 2,
+    "aura_effect": {
+      "type": "stat_bonus",
+      "stat": "def",
+      "value": 3,
+      "duration": 2
+    }
+  },
+  "cooldown": 4,
+  "range": {
+    "min": 0,
+    "max": 0
+  },
+  "description": "主动使用，周围2格内友方防御+3持续2回合",
+  "priority": 55
+}
