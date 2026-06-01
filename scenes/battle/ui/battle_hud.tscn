@@ -18,9 +18,16 @@ text = "第 1 回合 · 玩家回合"
 [node name="SaveButton" type="Button" parent="."]
 offset_left = 1120.0
 offset_top = 16.0
-offset_right = 1240.0
+offset_right = 1200.0
 offset_bottom = 52.0
 text = "保存"
+
+[node name="EndTurnButton" type="Button" parent="."]
+offset_left = 1040.0
+offset_top = 16.0
+offset_right = 1115.0
+offset_bottom = 52.0
+text = "结束回合"
 
 [node name="UnitInfoPanel" type="Panel" parent="."]
 offset_left = 8.0
@@ -60,4 +67,49 @@ offset_right = 240.0
 offset_bottom = 140.0
 visible = false
 
+[node name="PhaseOverlay" type="ColorRect" parent="."]
+anchors_preset = 15
+color = Color(0, 0, 0, 0.6)
+visible = false
+
+[node name="PhaseLabel" type="Label" parent="."]
+anchors_preset = 8
+offset_left = 340.0
+offset_top = 300.0
+offset_right = 940.0
+offset_bottom = 380.0
+horizontal_alignment = 1
+text = ""
+visible = false
+
+[node name="LevelUpOverlay" type="Panel" parent="."]
+anchors_preset = 8
+offset_left = 390.0
+offset_top = 240.0
+offset_right = 890.0
+offset_bottom = 380.0
+visible = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LevelUpOverlay"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="LevelUpOverlay/VBoxContainer"]
+layout_mode = 2
+text = "升级！"
+horizontal_alignment = 1
+
+[node name="UnitLabel" type="Label" parent="LevelUpOverlay/VBoxContainer"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="LevelUpOverlay/VBoxContainer"]
+layout_mode = 2
+text = ""
+
+[node name="ConfirmButton" type="Button" parent="LevelUpOverlay/VBoxContainer"]
+layout_mode = 2
+text = "确认"
+
 [connection signal="pressed" from="SaveButton" to="." method="_on_save_pressed"]
+[connection signal="pressed" from="EndTurnButton" to="." method="_on_end_turn_pressed"]

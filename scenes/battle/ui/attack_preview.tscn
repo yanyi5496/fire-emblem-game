@@ -13,6 +13,12 @@ text = "攻击方"
 [node name="DefenderLabel" type="Label" parent="VBoxContainer"]
 text = "防守方"
 
+[node name="WeaponLabel" type="Label" parent="VBoxContainer"]
+text = "武器: 无"
+
+[node name="AdvantageLabel" type="Label" parent="VBoxContainer"]
+text = ""
+
 [node name="HitRateLabel" type="Label" parent="VBoxContainer"]
 text = "命中 0%"
 

@@ -33,6 +33,7 @@ var battle_lifecycle = null
 var map_setup_service = null
 var combat_exec_service = null
 var battle_context: BattleContext = null
+var floating_text_service: FloatingTextService = null
 
 @onready var turn_manager = $TurnManager
 @onready var cursor: Node2D = $Cursor
@@ -59,6 +60,9 @@ func _ready() -> void:
 	combat_exec_service = CombatExecService.new()
 	combat_exec_service.initialize(units_container, _hit_effect, _crit_effect, _skill_effect)
 	add_child(battle_query)
+	floating_text_service = FloatingTextService.new()
+	add_child(floating_text_service)
+	floating_text_service.initialize(units_container)
 	battle_context = BattleContext.new()
 	battle_context.battle_query = battle_query
 	battle_context.skill_service = skill_service
@@ -100,6 +104,8 @@ func _connect_signals() -> void:
 				preview_node.attack_confirmed.connect(_on_attack_confirmed)
 			if not preview_node.attack_cancelled.is_connected(_on_attack_cancelled):
 				preview_node.attack_cancelled.connect(_on_attack_cancelled)
+	if not combat_exec_service.level_up_notification.is_connected(_on_level_up):
+		combat_exec_service.level_up_notification.connect(_on_level_up)
 
 func _disconnect_signals() -> void:
 	if combat_manager and combat_manager.combat_finished.is_connected(_on_combat_finished):
@@ -133,6 +139,9 @@ func _disconnect_signals() -> void:
 				preview_node.attack_confirmed.disconnect(_on_attack_confirmed)
 			if preview_node.attack_cancelled.is_connected(_on_attack_cancelled):
 				preview_node.attack_cancelled.disconnect(_on_attack_cancelled)
+	if is_instance_valid(combat_exec_service):
+		if combat_exec_service.level_up_notification.is_connected(_on_level_up):
+			combat_exec_service.level_up_notification.disconnect(_on_level_up)
 	if is_instance_valid(turn_manager):
 		if turn_manager.turn_started.is_connected(_on_turn_started):
 			turn_manager.turn_started.disconnect(_on_turn_started)
@@ -188,6 +197,8 @@ func start_battle(map_id: String) -> void:
 func _on_turn_started(phase: String) -> void:
 	if battle_hud and battle_hud.has_method("update_turn_info"):
 		battle_hud.update_turn_info(phase, turn_manager.turn_number)
+	if battle_hud and battle_hud.has_method("show_phase_transition"):
+		battle_hud.show_phase_transition(phase)
 	if phase == "player":
 		_check_battle_end()
 
@@ -224,6 +235,8 @@ func _spawn_unit(data: Dictionary) -> void:
 	if unit.runtime_state:
 		unit.runtime_state.ai_type = str(data.get("ai_type", "aggressive"))
 	units_container.add_child(unit)
+	unit.damaged.connect(_on_unit_damaged.bind(unit))
+	unit.healed.connect(_on_unit_healed.bind(unit))
 
 func _on_move_cursor(direction: Vector2) -> void:
 	if interaction_state in [BattleInteractionState.IDLE, BattleInteractionState.UNIT_SELECTED, BattleInteractionState.MOVING, BattleInteractionState.TARGETING, BattleInteractionState.SKILL_TARGETING]:
@@ -400,11 +413,22 @@ func _on_action_switch_weapon() -> void:
 	var current: String = selected_unit.runtime_state.equipped_weapon
 	var idx: int = inv.find(current)
 	var next_idx: int = (idx + 1) % inv.size()
-	selected_unit.runtime_state.equipped_weapon = inv[next_idx]
-	selected_unit.runtime_state.get_weapon_durability(inv[next_idx])
+	var next_weapon: String = inv[next_idx]
+	var next_data: Dictionary = DataManager.get_weapon(next_weapon)
+	if not selected_unit.runtime_state.can_equip_weapon_type(next_data.get("type", "")):
+		if battle_hud and battle_hud.has_method("show_status_message"):
+			battle_hud.show_status_message("该职业无法使用此武器")
+		return
+	if selected_unit.runtime_state.is_weapon_broken(next_weapon):
+		if battle_hud and battle_hud.has_method("show_status_message"):
+			battle_hud.show_status_message("此武器已损坏")
+		return
+	selected_unit.runtime_state.equipped_weapon = next_weapon
+	selected_unit.runtime_state.get_weapon_durability(next_weapon)
+	if battle_hud and battle_hud.has_method("show_unit_info"):
+		battle_hud.show_unit_info(selected_unit)
 	if battle_hud and battle_hud.has_method("show_message"):
-		battle_hud.show_message("装备: %s" % DataManager.get_weapon(inv[next_idx]).get("name", inv[next_idx]))
-	_execute_action_complete()
+		battle_hud.show_message("装备: %s" % next_data.get("name", next_weapon))
 
 func _on_attack_confirmed() -> void:
 	if not selected_unit or not pending_target:
@@ -428,12 +452,28 @@ func _on_combat_finished(result: Dictionary) -> void:
 	var defender: Node = _find_unit_by_id(defender_id)
 	if attacker and defender:
 		combat_exec_service.play_combat_effects(attacker, defender, result)
+		if result.get("did_miss", false):
+			floating_text_service.spawn_miss_text(defender.position)
+		if result.get("did_crit", false) and attacker and is_instance_valid(attacker):
+			floating_text_service.spawn_damage_text(attacker.position + Vector2(0, 12), result.get("damage", 0) * 3, false, true)
+
+func _on_level_up(unit_id: String, stats: Dictionary) -> void:
+	if battle_hud and battle_hud.has_method("show_level_up"):
+		battle_hud.show_level_up(unit_id, stats)
 
 func _find_unit_by_id(unit_id: String) -> Node:
 	for unit in units_container.get_children():
 		if unit.unit_id == unit_id:
 			return unit
 	return null
+
+func _on_unit_damaged(amount: int, unit: Node) -> void:
+	if floating_text_service and is_instance_valid(unit):
+		floating_text_service.spawn_damage_text(unit.position + Vector2(0, -32), amount)
+
+func _on_unit_healed(amount: int, unit: Node) -> void:
+	if floating_text_service and is_instance_valid(unit):
+		floating_text_service.spawn_damage_text(unit.position + Vector2(0, -32), amount, true)
 
 func _on_attack_cancelled() -> void:
 	interaction_state = BattleInteractionState.TARGETING
