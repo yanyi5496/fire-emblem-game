@@ -13,6 +13,12 @@ func _ready() -> void:
 	_register_schemas()
 	load_all()
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		if event.pressed and event.keycode == KEY_F5 and event.shift_pressed:
+			reload()
+			push_warning("DataManager: Hot reload complete")
+
 func _register_schemas() -> void:
 	_schema_validators["units"] = {
 		"required_fields": ["id", "name", "job", "stats", "inventory"],
@@ -28,7 +34,7 @@ func _register_schemas() -> void:
 		"known_fields": ["id", "name", "tier", "promotes_to", "weapons", "mov", "growth_bonus", "terrain_adaptation", "skills"],
 	}
 	_schema_validators["skills"] = {
-		"required_fields": ["id", "type", "trigger", "effect"],
+		"required_fields": ["id", "type", "effect"],
 		"known_fields": ["id", "name", "type", "trigger", "cost", "effect", "range", "cooldown", "description", "priority"],
 	}
 	_schema_validators["maps"] = {
@@ -139,6 +145,7 @@ func reload() -> void:
 	_jobs.clear()
 	_skills.clear()
 	_maps.clear()
+	_characters.clear()
 	load_all()
 
 func get_unit(id: String) -> Dictionary:

@@ -9,8 +9,11 @@ const RESOLUTION_PRESETS := {
 	"1920x1080": Vector2i(1920, 1080),
 }
 
+const SETTINGS_FILE := "user://settings.cfg"
+
 func _ready() -> void:
 	GameState.set_phase(GameState.GamePhase.SETTINGS)
+	_load_settings_from_disk()
 	_load_settings()
 
 @onready var _master_slider = $MarginContainer/VBoxContainer/MasterVolumeSlider
@@ -89,4 +92,26 @@ func _on_sfx_volume_slider_drag_ended(value_changed: bool) -> void:
 
 func _on_back_pressed() -> void:
 	_save_settings()
+	_save_settings_to_disk()
 	SceneRouter.goto("main_menu")
+
+func _load_settings_from_disk() -> void:
+	if not FileAccess.file_exists(SETTINGS_FILE):
+		return
+	var file := FileAccess.open(SETTINGS_FILE, FileAccess.READ)
+	if not file:
+		return
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) == OK:
+		var data := json.get_data() as Dictionary
+		if data:
+			for key in data:
+				GameState.settings[key] = data[key]
+
+func _save_settings_to_disk() -> void:
+	var file := FileAccess.open(SETTINGS_FILE, FileAccess.WRITE)
+	if not file:
+		return
+	var json_str := JSON.new().stringify(GameState.settings, "\t")
+	file.store_string(json_str)
+	file = null

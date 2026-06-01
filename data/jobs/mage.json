@@ -1,0 +1,14 @@
+{
+  "id": "mage",
+  "name": "法师",
+  "tier": 1,
+  "promotes_to": "sage",
+  "weapons": ["magic"],
+  "mov": 5,
+  "growth_bonus": {
+    "mag": 10,
+    "res": 5
+  },
+  "terrain_adaptation": {},
+  "skills": []
+}

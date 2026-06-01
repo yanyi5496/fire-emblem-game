@@ -1,0 +1,33 @@
+{
+  "id": "hero_004",
+  "name": "米莉亚",
+  "job": "mage",
+  "level": 1,
+  "exp": 0,
+  "stats": {
+    "hp": 14,
+    "mp": 10,
+    "str": 1,
+    "mag": 8,
+    "skl": 4,
+    "spd": 5,
+    "def": 2,
+    "res": 8,
+    "luk": 5,
+    "mov": 5
+  },
+  "growth_rates": {
+    "hp": 50,
+    "mp": 55,
+    "str": 5,
+    "mag": 60,
+    "skl": 35,
+    "spd": 40,
+    "def": 15,
+    "res": 60,
+    "luk": 40
+  },
+  "inventory": ["fire_magic"],
+  "skills": ["flame_burst"],
+  "tags": []
+}

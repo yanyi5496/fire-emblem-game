@@ -4,11 +4,43 @@ class_name BootController
 
 func _ready() -> void:
 	_apply_theme()
+	_apply_saved_settings()
 	if SceneRouter:
 		GameState.set_phase(GameState.GamePhase.TITLE)
 		SceneRouter.goto("main_menu")
 	else:
 		push_error("SceneRouter autoload not available")
+
+func _apply_saved_settings() -> void:
+	var settings: Dictionary = GameState.settings
+	if settings.is_empty():
+		_load_settings_from_disk()
+		settings = GameState.settings
+	if settings.has("master_volume"):
+		AudioManager.set_volume(AudioManager.Bus.MASTER, int(settings["master_volume"]))
+	if settings.has("bgm_volume"):
+		AudioManager.set_volume(AudioManager.Bus.BGM, int(settings["bgm_volume"]))
+	if settings.has("sfx_volume"):
+		AudioManager.set_volume(AudioManager.Bus.SFX, int(settings["sfx_volume"]))
+	if settings.get("fullscreen", false):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	elif settings.has("window_width") and settings.has("window_height"):
+		DisplayServer.window_set_size(Vector2i(int(settings["window_width"]), int(settings["window_height"])))
+
+const _SETTINGS_FILE := "user://settings.cfg"
+
+func _load_settings_from_disk() -> void:
+	if not FileAccess.file_exists(_SETTINGS_FILE):
+		return
+	var file := FileAccess.open(_SETTINGS_FILE, FileAccess.READ)
+	if not file:
+		return
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) == OK:
+		var data := json.get_data() as Dictionary
+		if data:
+			for key in data:
+				GameState.settings[key] = data[key]
 
 func _apply_theme() -> void:
 	var theme := Theme.new()

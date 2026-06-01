@@ -1,0 +1,32 @@
+{
+  "id": "enemy_004",
+  "name": "暗黑法师",
+  "job": "mage",
+  "level": 2,
+  "exp": 0,
+  "stats": {
+    "hp": 15,
+    "mp": 10,
+    "str": 1,
+    "mag": 7,
+    "skl": 4,
+    "spd": 4,
+    "def": 2,
+    "res": 6,
+    "luk": 3,
+    "mov": 5
+  },
+  "growth_rates": {
+    "hp": 50,
+    "mp": 50,
+    "mag": 55,
+    "skl": 35,
+    "spd": 40,
+    "def": 15,
+    "res": 55,
+    "luk": 30
+  },
+  "inventory": ["fire_magic"],
+  "skills": ["flame_burst"],
+  "tags": []
+}

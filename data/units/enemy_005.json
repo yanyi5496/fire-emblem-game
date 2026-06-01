@@ -1,0 +1,31 @@
+{
+  "id": "enemy_005",
+  "name": "重甲兵",
+  "job": "warrior",
+  "level": 5,
+  "exp": 0,
+  "stats": {
+    "hp": 32,
+    "mp": 0,
+    "str": 13,
+    "mag": 0,
+    "skl": 6,
+    "spd": 3,
+    "def": 12,
+    "res": 2,
+    "luk": 2,
+    "mov": 4
+  },
+  "growth_rates": {
+    "hp": 90,
+    "str": 55,
+    "skl": 30,
+    "spd": 20,
+    "def": 55,
+    "res": 10,
+    "luk": 20
+  },
+  "inventory": ["silver_axe"],
+  "skills": ["tough_body", "counter_stance"],
+  "tags": []
+}

@@ -1,0 +1,31 @@
+{
+  "id": "enemy_003",
+  "name": "弓箭手",
+  "job": "archer",
+  "level": 2,
+  "exp": 0,
+  "stats": {
+    "hp": 18,
+    "mp": 4,
+    "str": 6,
+    "mag": 1,
+    "skl": 7,
+    "spd": 5,
+    "def": 3,
+    "res": 1,
+    "luk": 3,
+    "mov": 5
+  },
+  "growth_rates": {
+    "hp": 65,
+    "str": 40,
+    "skl": 50,
+    "spd": 45,
+    "def": 25,
+    "res": 15,
+    "luk": 30
+  },
+  "inventory": ["iron_bow"],
+  "skills": [],
+  "tags": []
+}

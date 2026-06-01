@@ -18,6 +18,9 @@ var _is_alive: bool = true
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
+@onready var hp_bar_fill: ColorRect = $HPBarFill
+@onready var hp_bar_bg: ColorRect = $HPBarBackground
+@onready var state_marker: ColorRect = $StateMarker
 
 func play_animation(anim_name: String) -> void:
 	if animation_player and animation_player.has_animation(anim_name):
@@ -56,6 +59,8 @@ func setup(id: String, unit_team: String, pos: Vector2i) -> void:
 	add_child(runtime_state)
 	add_to_group("units")
 	_load_sprite(id, unit_team)
+	_update_hp_bar()
+	_update_state_marker()
 
 func _load_sprite(id: String, unit_team: String) -> void:
 	var sprite_node := get_node("Sprite2D") as Sprite2D
@@ -79,6 +84,7 @@ func _load_sprite(id: String, unit_team: String) -> void:
 func reset_action_state() -> void:
 	if runtime_state:
 		runtime_state.action_state = GameConstants.ActionState.IDLE
+	_update_state_marker()
 
 func can_move() -> bool:
 	return runtime_state and runtime_state.action_state == GameConstants.ActionState.IDLE
@@ -90,16 +96,19 @@ func attack(target: Node) -> void:
 	if runtime_state:
 		runtime_state.action_state = GameConstants.ActionState.ACTED
 	attacked.emit(target)
+	_update_state_marker()
 
 func wait() -> void:
 	if runtime_state:
 		runtime_state.action_state = GameConstants.ActionState.ACTED
+	_update_state_marker()
 
 func take_damage(amount: int) -> void:
 	if not runtime_state:
 		return
 	runtime_state.current_hp = max(0, runtime_state.current_hp - amount)
 	damaged.emit(amount)
+	_update_hp_bar()
 	if runtime_state.current_hp <= 0:
 		die()
 
@@ -109,12 +118,16 @@ func heal(amount: int) -> void:
 	var old: int = runtime_state.current_hp
 	runtime_state.current_hp = min(runtime_state.max_hp, runtime_state.current_hp + amount)
 	healed.emit(runtime_state.current_hp - old)
+	_update_hp_bar()
 
 func die() -> void:
 	_is_alive = false
 	if runtime_state:
 		runtime_state.action_state = GameConstants.ActionState.DEAD
 	died.emit()
+	_update_hp_bar()
+	_update_state_marker()
+	visible = false
 
 func to_save_dict() -> Dictionary:
 	return {
@@ -146,3 +159,48 @@ func apply_saved_state(data: Dictionary) -> void:
 	if not _is_alive and runtime_state:
 		runtime_state.current_hp = 0
 		runtime_state.action_state = GameConstants.ActionState.DEAD
+		visible = false
+	_update_hp_bar()
+	_update_state_marker()
+
+func _update_hp_bar() -> void:
+	if not hp_bar_fill or not hp_bar_bg:
+		return
+	if not runtime_state or not _is_alive:
+		hp_bar_fill.visible = false
+		hp_bar_bg.visible = false
+		return
+	hp_bar_fill.visible = true
+	hp_bar_bg.visible = true
+	var ratio: float = float(runtime_state.current_hp) / float(max(1, runtime_state.max_hp))
+	var bar_width: float = 32.0 * ratio
+	hp_bar_fill.size.x = bar_width
+	hp_bar_fill.position.x = -16.0
+	if ratio > 0.5:
+		hp_bar_fill.color = Color(0.2, 0.8, 0.2)
+	elif ratio > 0.25:
+		hp_bar_fill.color = Color(0.9, 0.7, 0.1)
+	else:
+		hp_bar_fill.color = Color(0.9, 0.15, 0.15)
+
+func _update_state_marker() -> void:
+	if not state_marker:
+		return
+	if not _is_alive:
+		state_marker.visible = false
+		return
+	state_marker.visible = true
+	if not runtime_state:
+		state_marker.color = Color(0.5, 0.5, 0.5, 0.9)
+		return
+	match runtime_state.action_state:
+		GameConstants.ActionState.IDLE:
+			state_marker.color = Color(0.2, 0.8, 0.2, 0.9)
+		GameConstants.ActionState.MOVED:
+			state_marker.color = Color(0.2, 0.5, 0.9, 0.9)
+		GameConstants.ActionState.ACTED:
+			state_marker.color = Color(0.5, 0.5, 0.5, 0.9)
+		GameConstants.ActionState.DEAD:
+			state_marker.visible = false
+		_:
+			state_marker.color = Color(0.5, 0.5, 0.5, 0.9)

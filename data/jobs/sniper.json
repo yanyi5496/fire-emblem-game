@@ -1,0 +1,16 @@
+{
+  "id": "sniper",
+  "name": "狙击手",
+  "tier": 2,
+  "promotes_to": "",
+  "weapons": ["bow"],
+  "mov": 6,
+  "growth_bonus": {
+    "skl": 15,
+    "spd": 10
+  },
+  "terrain_adaptation": {
+    "forest": 1
+  },
+  "skills": ["sure_shot"]
+}

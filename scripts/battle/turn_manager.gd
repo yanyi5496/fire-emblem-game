@@ -59,7 +59,7 @@ func _execute_enemy_turn() -> void:
 	battle_check_requested.emit()
 	if has_battle_ended():
 		return
-	_execute_round_end()
+	start_turn("npc")
 
 func _execute_npc_turn() -> void:
 	var npc_units: Array[Node] = []

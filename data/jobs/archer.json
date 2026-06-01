@@ -1,0 +1,14 @@
+{
+  "id": "archer",
+  "name": "弓手",
+  "tier": 1,
+  "promotes_to": "sniper",
+  "weapons": ["bow"],
+  "mov": 5,
+  "growth_bonus": {
+    "skl": 10,
+    "spd": 5
+  },
+  "terrain_adaptation": {},
+  "skills": []
+}

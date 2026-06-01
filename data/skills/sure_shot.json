@@ -1,0 +1,16 @@
+{
+  "id": "sure_shot",
+  "name": "精准射击",
+  "type": "passive",
+  "trigger": "before_combat",
+  "cost": {},
+  "effect": {
+    "type": "stat_bonus",
+    "target": "self",
+    "stat": "skl",
+    "value": 3,
+    "duration": 1
+  },
+  "description": "战斗时技巧 +3",
+  "priority": 90
+}
