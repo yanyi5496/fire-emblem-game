@@ -23,37 +23,39 @@ func _build_slot_list() -> void:
 	title.text = "存档" if _mode == "save" else "读取存档"
 	for i in range(1, SaveManager.MAX_SLOTS + 1):
 		var slot_data := _get_slot_info(i)
-		var btn := Button.new()
-		btn.name = "SlotButton_%d" % i
-		btn.custom_minimum_size = Vector2(400, 60)
-		if slot_data.is_empty():
-			btn.text = "槽位 %d — 空" % i
-			btn.disabled = (_mode == "load")
-		else:
-			var chapter: String = str(slot_data.get("chapter", ""))
-			var map_id: String = str(slot_data.get("map_id", ""))
-			var turn: int = int(slot_data.get("turn", 0))
-			var timestamp: int = int(slot_data.get("timestamp", 0))
-			var time_str := Time.get_datetime_string_from_unix_time(timestamp) if timestamp > 0 else "未知"
-			btn.text = "槽位 %d — %s | %s | 第%d回合 | %s" % [i, chapter if chapter != "" else map_id, _mode_text(slot_data), turn, time_str]
-		var slot_index := i
-		btn.pressed.connect(func(): _on_slot_pressed(slot_index))
-		vbox.add_child(btn)
-		vbox.move_child(btn, vbox.get_child_count() - 2)
+		var is_empty := slot_data.is_empty()
 		if _mode == "save":
+			var hbox := HBoxContainer.new()
+			hbox.name = "SlotRow_%d" % i
+			var btn := Button.new()
+			btn.name = "SlotButton_%d" % i
+			btn.custom_minimum_size = Vector2(400, 60)
+			btn.text = "槽位 %d — 空" % i if is_empty else "槽位 %d — %s | %s | 第%d回合 | %s" % [i, str(slot_data.get("chapter", "")) if str(slot_data.get("chapter", "")) != "" else str(slot_data.get("map_id", "")), _mode_text(slot_data), int(slot_data.get("turn", 0)), _format_time(int(slot_data.get("timestamp", 0))))]
+			var slot_index := i
+			btn.pressed.connect(func(): _on_slot_pressed(slot_index))
+			hbox.add_child(btn)
 			var del_btn := Button.new()
 			del_btn.name = "DeleteButton_%d" % i
 			del_btn.text = "删除"
 			del_btn.custom_minimum_size = Vector2(80, 30)
-			if slot_data.is_empty():
-				del_btn.disabled = true
-			var di := i
-			del_btn.pressed.connect(func(): _on_delete_pressed(di))
-			var hbox := HBoxContainer.new()
+			del_btn.disabled = is_empty
+			del_btn.pressed.connect(func(): _on_delete_pressed(slot_index))
+			hbox.add_child(del_btn)
 			vbox.add_child(hbox)
 			vbox.move_child(hbox, vbox.get_child_count() - 2)
-			hbox.add_child(btn)
-			hbox.add_child(del_btn)
+		else:
+			var btn := Button.new()
+			btn.name = "SlotButton_%d" % i
+			btn.custom_minimum_size = Vector2(400, 60)
+			if is_empty:
+				btn.text = "槽位 %d — 空" % i
+				btn.disabled = true
+			else:
+				btn.text = "槽位 %d — %s | %s | 第%d回合 | %s" % [i, str(slot_data.get("chapter", "")) if str(slot_data.get("chapter", "")) != "" else str(slot_data.get("map_id", "")), _mode_text(slot_data), int(slot_data.get("turn", 0)), _format_time(int(slot_data.get("timestamp", 0))))]
+			var slot_index := i
+			btn.pressed.connect(func(): _on_slot_pressed(slot_index))
+			vbox.add_child(btn)
+			vbox.move_child(btn, vbox.get_child_count() - 2)
 
 func _mode_text(data: Dictionary) -> String:
 	var result: String = str(data.get("latest_battle_result", ""))
@@ -63,6 +65,11 @@ func _mode_text(data: Dictionary) -> String:
 		"": return "进行中"
 		_: return result
 
+func _format_time(timestamp: int) -> String:
+	if timestamp <= 0:
+		return "未知"
+	return Time.get_datetime_string_from_unix_time(timestamp)
+
 func _get_slot_info(slot: int) -> Dictionary:
 	var path := "user://save_%02d.save" % slot
 	if not FileAccess.file_exists(path):
@@ -71,6 +78,7 @@ func _get_slot_info(slot: int) -> Dictionary:
 	if not file:
 		return {}
 	var json_str := file.get_as_text()
+	file = null
 	var json := JSON.new()
 	if json.parse(json_str) != OK:
 		return {}
@@ -78,11 +86,14 @@ func _get_slot_info(slot: int) -> Dictionary:
 
 func _on_slot_pressed(slot: int) -> void:
 	if _mode == "load":
-		if SaveManager.load_game(slot).is_empty():
+		var slot_data := _get_slot_info(slot)
+		if slot_data.is_empty():
 			return
-		var next_scene := GameState.get_resume_scene()
-		if next_scene != "main_menu":
-			SceneRouter.goto(next_scene)
+		var resume_scene: String = str(slot_data.get("resume_scene", "main_menu"))
+		if resume_scene == "":
+			resume_scene = "main_menu"
+		SaveManager.load_game(slot)
+		SceneRouter.goto(resume_scene)
 	else:
 		SaveManager.save_game(slot)
 		_build_slot_list()
