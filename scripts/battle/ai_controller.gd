@@ -245,6 +245,12 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 						active_skill_service.clear_temporary_passives(target)
 			else:
 				unit.wait()
+		"heal":
+			var target = action.get("target")
+			if target and _battle_controller and _battle_controller.skill_service:
+				_execute_skill_heal_with_target(unit, target, _battle_controller)
+			else:
+				unit.wait()
 		"self_buff":
 			var skill_id: String = str(action.get("skill_id", ""))
 			if skill_id == "":
@@ -262,7 +268,7 @@ func _execute_action(unit: Node, action: Dictionary) -> void:
 				else:
 					var heal_target = _evaluate_heal(unit)
 					if heal_target != null:
-						_execute_skill_heal(unit, heal_target, _battle_controller)
+						_execute_skill_heal_with_target(unit, heal_target, _battle_controller)
 					else:
 						unit.wait()
 			else:
@@ -292,6 +298,24 @@ func _execute_skill_heal(unit: Node, target: Node, battle_controller: Node) -> v
 			var result: Dictionary = battle_controller.skill_service.execute_skill(unit, target, skill_id)
 			if result.get("success", false):
 				return
+			return
+	unit.wait()
+
+func _execute_skill_heal_with_target(unit: Node, target: Node, battle_controller: Node) -> void:
+	if not unit.runtime_state or not target:
+		unit.wait()
+		return
+	for skill_id in unit.runtime_state.skills:
+		var skill_data: Dictionary = DataManager.get_skill(skill_id)
+		if skill_data.get("type", "") != "active":
+			continue
+		if not unit.runtime_state.can_use_skill(skill_id):
+			continue
+		if skill_data.get("effect", {}).get("type", "") != "heal":
+			continue
+		var result: Dictionary = battle_controller.skill_service.execute_skill(unit, target, skill_id)
+		if result.get("success", false):
+			unit.runtime_state.action_state = GameConstants.ActionState.ACTED
 			return
 	unit.wait()
 

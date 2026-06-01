@@ -6,6 +6,7 @@ signal moved(new_pos: Vector2i)
 signal attacked(target: Node)
 signal damaged(amount: int)
 signal healed(amount: int)
+signal was_crit()
 signal died()
 signal action_state_changed(new_state: String)
 

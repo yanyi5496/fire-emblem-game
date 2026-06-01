@@ -9,7 +9,11 @@ func initialize(parent: Node2D) -> void:
 
 func spawn_damage_text(world_pos: Vector2, amount: int, is_heal: bool = false, is_crit: bool = false) -> void:
 	var label := Label.new()
-	if is_crit:
+	if is_crit and amount == 0:
+		label.text = "暴击!"
+		label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.0))
+		label.add_theme_font_size_override("font_size", 20)
+	elif is_crit:
 		label.text = "暴击 %d" % amount
 		label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.0))
 		label.add_theme_font_size_override("font_size", 22)

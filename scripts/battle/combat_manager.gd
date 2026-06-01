@@ -176,6 +176,7 @@ func _apply_result(result: Dictionary, skill_service = null) -> void:
 		if crit_roll < result.get("crit_rate", 0):
 			result["did_crit"] = true
 			defender.take_damage(result.get("damage", 0) * 3)
+			defender.was_crit.emit()
 			_remove_sleep(defender)
 		else:
 			defender.take_damage(result.get("damage", 0))

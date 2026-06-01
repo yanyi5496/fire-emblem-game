@@ -121,8 +121,10 @@ func _advance() -> void:
 func _skip_to_next_marker() -> void:
 	while _current_index < _lines.size():
 		var line := _lines[_current_index]
-		if line.get("type", _story_parser_dep.LineType.UNKNOWN) != _story_parser_dep.LineType.DIALOGUE:
-			break
+		var line_type = line.get("type", _story_parser_dep.LineType.UNKNOWN)
+		if line_type == _story_parser_dep.LineType.CONDITION:
+			if str(line.get("flag", "")) == "":
+				break
 		_current_index += 1
 	_advance()
 
@@ -272,6 +274,11 @@ func _on_post_battle_story_end() -> void:
 	elif GameState.completed_maps.size() > 0:
 		GameState.current_map_id = ""
 		GameState.set_resume_scene("main_menu")
+		SceneRouter.goto("main_menu")
+	else:
+		GameState.current_map_id = ""
+		GameState.set_resume_scene("main_menu")
+		SceneRouter.goto("main_menu")
 
 func _handle_event(event_id: String) -> void:
 	if event_id.begins_with("promote_unit:"):
@@ -303,6 +310,8 @@ func _name_to_portrait_id(display_name: String) -> String:
 	match display_name:
 		"艾克": return "hero_001"
 		"琳娜": return "hero_002"
+		"雷文": return "hero_003"
+		"米莉亚": return "hero_004"
 		"山贼头目": return "enemy_002"
 		_: return display_name
 

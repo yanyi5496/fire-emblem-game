@@ -51,7 +51,8 @@ func process_level_ups() -> void:
 			var pending: Array[Dictionary] = unit.runtime_state.pending_level_ups
 			if not pending.is_empty():
 				unit.runtime_state.pending_level_ups = []
-				level_up_notification.emit(unit.unit_id, pending[0] if not pending.is_empty() else {})
+				for lvl_up in pending:
+					level_up_notification.emit(unit.unit_id, lvl_up)
 
 func execute_attack(selected_unit: Node, pending_target: Node, weapon_id: String, combat_manager, skill_service, battle_hud: Node) -> void:
 	if not selected_unit or not pending_target:

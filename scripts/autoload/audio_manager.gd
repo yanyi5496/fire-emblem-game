@@ -6,6 +6,7 @@ enum Bus { MASTER = 0, BGM = 1, SFX = 2, VOICE = 3 }
 
 var _current_bgm: AudioStreamPlayer = null
 var _bgm_fade_tween = null
+var _fade_out_player: AudioStreamPlayer = null
 
 func play_bgm(bgm_id: String, fade_in: float = 0.5) -> void:
 	var path := "res://assets/audio/bgm/%s.ogg" % bgm_id
@@ -70,6 +71,7 @@ func _fade_in(player: AudioStreamPlayer, duration: float) -> void:
 	tween.tween_method(_set_bgm_volume, -40.0, 0.0, duration)
 
 func _fade_out_and_free(player: AudioStreamPlayer, duration: float) -> void:
+	_fade_out_player = player
 	_current_bgm = null
 	var tween := create_tween()
 	tween.tween_method(_fade_out_target, 0.0, -40.0, duration).set_trans(Tween.TRANS_SINE)
@@ -77,6 +79,7 @@ func _fade_out_and_free(player: AudioStreamPlayer, duration: float) -> void:
 		if is_instance_valid(player):
 			player.stop()
 			player.queue_free()
+		_fade_out_player = null
 	)
 
 func _set_bgm_volume(value: float) -> void:
@@ -84,4 +87,5 @@ func _set_bgm_volume(value: float) -> void:
 		_current_bgm.volume_db = value
 
 func _fade_out_target(value: float) -> void:
-	pass
+	if is_instance_valid(_fade_out_player):
+		_fade_out_player.volume_db = value

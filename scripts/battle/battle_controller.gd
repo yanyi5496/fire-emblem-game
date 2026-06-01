@@ -41,9 +41,14 @@ var floating_text_service: FloatingTextService = null
 @onready var tile_map: TileMap = $MapRoot/GroundTileMap
 @onready var highlight_tile_map: TileMap = $MapRoot/HighlightTileMap
 @onready var pathfinding = $PathfindingService
+@onready var camera: Camera2D = $Camera2D
 
 var map_data: Dictionary = {}
 var _battle_started_once := false
+
+func _process(_delta: float) -> void:
+	if camera and cursor:
+		camera.position = camera.position.lerp(cursor.position, 0.15)
 
 const _hit_effect := preload("res://scenes/battle/effects/hit_effect.tscn")
 const _crit_effect := preload("res://scenes/battle/effects/crit_effect.tscn")
@@ -237,6 +242,7 @@ func _spawn_unit(data: Dictionary) -> void:
 	units_container.add_child(unit)
 	unit.damaged.connect(_on_unit_damaged.bind(unit))
 	unit.healed.connect(_on_unit_healed.bind(unit))
+	unit.was_crit.connect(_on_unit_crit.bind(unit))
 
 func _on_move_cursor(direction: Vector2) -> void:
 	if interaction_state in [BattleInteractionState.IDLE, BattleInteractionState.UNIT_SELECTED, BattleInteractionState.MOVING, BattleInteractionState.TARGETING, BattleInteractionState.SKILL_TARGETING]:
@@ -452,10 +458,8 @@ func _on_combat_finished(result: Dictionary) -> void:
 	var defender: Node = _find_unit_by_id(defender_id)
 	if attacker and defender:
 		combat_exec_service.play_combat_effects(attacker, defender, result)
-		if result.get("did_miss", false):
+		if result.get("did_miss", false) and is_instance_valid(defender):
 			floating_text_service.spawn_miss_text(defender.position)
-		if result.get("did_crit", false) and attacker and is_instance_valid(attacker):
-			floating_text_service.spawn_damage_text(attacker.position + Vector2(0, 12), result.get("damage", 0) * 3, false, true)
 
 func _on_level_up(unit_id: String, stats: Dictionary) -> void:
 	if battle_hud and battle_hud.has_method("show_level_up"):
@@ -474,6 +478,10 @@ func _on_unit_damaged(amount: int, unit: Node) -> void:
 func _on_unit_healed(amount: int, unit: Node) -> void:
 	if floating_text_service and is_instance_valid(unit):
 		floating_text_service.spawn_damage_text(unit.position + Vector2(0, -32), amount, true)
+
+func _on_unit_crit(unit: Node) -> void:
+	if floating_text_service and is_instance_valid(unit):
+		floating_text_service.spawn_damage_text(unit.position + Vector2(16, -48), 0, false, true)
 
 func _on_attack_cancelled() -> void:
 	interaction_state = BattleInteractionState.TARGETING
